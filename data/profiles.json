@@ -1,0 +1,556 @@
+{
+  "records": {
+    "p_mwlpfwub_uwveg": {
+      "profile": {
+        "id": "p_mwlpfwub_uwveg",
+        "name": "لاعب الديوان",
+        "avatarId": 8,
+        "accentColor": "#2B4C7E",
+        "wins": 0,
+        "losses": 0,
+        "draws": 2,
+        "totalPoints": 40,
+        "gamesPlayed": {
+          "xo": 2
+        },
+        "unlockedAchievements": [
+          "first-match"
+        ],
+        "matchHistory": [
+          {
+            "id": "m_1794988326484",
+            "gameId": "xo",
+            "mode": "online",
+            "outcome": "draw",
+            "pointsEarned": 20,
+            "playedAt": "2026-11-18T07:52:06.484Z"
+          },
+          {
+            "id": "m_1794981209638",
+            "gameId": "xo",
+            "mode": "solo",
+            "outcome": "draw",
+            "pointsEarned": 20,
+            "playedAt": "2026-11-18T05:53:29.638Z"
+          }
+        ],
+        "createdAt": "2026-11-18T08:36:57.368Z",
+        "onboardingCompleted": false
+      }
+    },
+    "p_mwltjlp3_sly7t": {
+      "profile": {
+        "id": "p_mwltjlp3_sly7t",
+        "name": "لاعب الديوان",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "wins": 1,
+        "losses": 1,
+        "draws": 1,
+        "totalPoints": 225,
+        "gamesPlayed": {
+          "rps": 1,
+          "xo": 1,
+          "memory": 1
+        },
+        "unlockedAchievements": [
+          "first-match",
+          "first-win"
+        ],
+        "matchHistory": [
+          {
+            "id": "m_1794989589446",
+            "gameId": "memory",
+            "mode": "solo",
+            "outcome": "win",
+            "pointsEarned": 192,
+            "playedAt": "2026-11-18T08:13:09.446Z"
+          },
+          {
+            "id": "m_1794988326722",
+            "gameId": "xo",
+            "mode": "online",
+            "outcome": "draw",
+            "pointsEarned": 20,
+            "playedAt": "2026-11-18T07:52:06.722Z"
+          },
+          {
+            "id": "m_1794988103627",
+            "gameId": "rps",
+            "mode": "solo",
+            "outcome": "loss",
+            "pointsEarned": 13,
+            "playedAt": "2026-11-18T07:48:23.627Z"
+          }
+        ],
+        "createdAt": "2026-11-18T08:36:57.368Z",
+        "onboardingCompleted": false
+      }
+    },
+    "p_mwlvbbms_dpbdw": {
+      "profile": {
+        "id": "p_mwlvbbms_dpbdw",
+        "name": "Pilot_2519",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "createdAt": "2026-11-18T08:37:39.387Z",
+        "onboardingCompleted": true,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": [],
+        "username": "Pilot_2519",
+        "usernameLower": "pilot_2519",
+        "usernameUpdatedAt": "2026-11-18T08:37:39.387Z",
+        "nextUsernameChangeAt": "2026-11-25T08:37:39.387Z",
+        "isFirebaseLinked": false
+      },
+      "pinHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$6I9rtqImh8ffe2LvOTTxvw$wcDchwtEt/Fz4whF4EEJ8VtyI0szReyw+12ldAaHmh4",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T08:37:39.387Z",
+          "blindIndex": "0be5b90da10030769b4c0fd3de000efeeeacf18a6e89fa5a9f1d996b5a5c150c"
+        }
+      ]
+    },
+    "p_mwlvh9fg_dthzn": {
+      "profile": {
+        "id": "p_mwlvh9fg_dthzn",
+        "name": "Hero_3178",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "createdAt": "2026-11-18T08:41:51.940Z",
+        "onboardingCompleted": true,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": [],
+        "username": "Hero_3178",
+        "usernameLower": "hero_3178",
+        "usernameUpdatedAt": "2026-11-18T08:41:51.940Z",
+        "nextUsernameChangeAt": "2026-11-25T08:41:51.940Z",
+        "isFirebaseLinked": false
+      },
+      "pinHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$9z4qvcjz3BxIOonsjTOgnA$J64wH/z8Qe3t3eXIvoBok2PhHBRjmloLhXhPzNfM0fw",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T08:41:51.940Z",
+          "blindIndex": "6abf9b3421cbc7e13a4ea55b6f874cf70916860c28429fcdd8888b307cd150d0"
+        }
+      ]
+    },
+    "NHqMwiiCo8WvZokYguH6PVIUDlR2": {
+      "profile": {
+        "id": "NHqMwiiCo8WvZokYguH6PVIUDlR2",
+        "uid": "NHqMwiiCo8WvZokYguH6PVIUDlR2",
+        "name": "dfn",
+        "avatarId": 8,
+        "accentColor": "#2D6A4F",
+        "createdAt": "2026-11-18T08:53:45.710Z",
+        "onboardingCompleted": true,
+        "wins": 3,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 342,
+        "gamesPlayed": {
+          "guess-song": 1,
+          "trivia": 1,
+          "hidden-word": 1
+        },
+        "unlockedAchievements": [
+          "first-match",
+          "first-win"
+        ],
+        "matchHistory": [
+          {
+            "id": "m_1794992306419_gh37",
+            "gameId": "hidden-word",
+            "mode": "solo",
+            "outcome": "win",
+            "pointsEarned": 140,
+            "playedAt": "2026-11-18T08:58:26.419Z"
+          },
+          {
+            "id": "m_1794992223659_3g9r",
+            "gameId": "trivia",
+            "mode": "solo",
+            "outcome": "win",
+            "pointsEarned": 122,
+            "playedAt": "2026-11-18T08:57:03.659Z"
+          },
+          {
+            "id": "m_1794992163058_uw3e",
+            "gameId": "guess-song",
+            "mode": "solo",
+            "outcome": "win",
+            "pointsEarned": 80,
+            "playedAt": "2026-11-18T08:56:03.058Z"
+          }
+        ],
+        "username": "dfn",
+        "usernameLower": "dfn",
+        "usernameUpdatedAt": "2026-11-18T08:53:45.710Z",
+        "nextUsernameChangeAt": "2026-11-25T08:53:45.710Z",
+        "isFirebaseLinked": true,
+        "hasPin": false
+      }
+    },
+    "p_mwlw4lb7_ttrdt": {
+      "profile": {
+        "id": "p_mwlw4lb7_ttrdt",
+        "name": "NovaFix_9167",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "createdAt": "2026-11-18T08:59:59.594Z",
+        "onboardingCompleted": true,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": [],
+        "username": "NovaFix_9167",
+        "usernameLower": "novafix_9167",
+        "usernameUpdatedAt": "2026-11-18T08:59:59.594Z",
+        "nextUsernameChangeAt": "2026-11-25T08:59:59.594Z",
+        "isFirebaseLinked": false
+      },
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T08:59:59.594Z",
+          "blindIndex": "1d13a20cd556b0b232ed04c5e08c79b6e64f7a75ffc32e78dd5431ba6f438806"
+        }
+      ]
+    },
+    "p_mwlw4ugi_f28f6": {
+      "profile": {
+        "id": "p_mwlw4ugi_f28f6",
+        "name": "NovaFix_1107",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "createdAt": "2026-11-18T09:00:11.558Z",
+        "onboardingCompleted": true,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": [],
+        "username": "NovaFix_1107",
+        "usernameLower": "novafix_1107",
+        "usernameUpdatedAt": "2026-11-18T09:00:11.558Z",
+        "nextUsernameChangeAt": "2026-11-25T09:00:11.558Z",
+        "isFirebaseLinked": false
+      },
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T09:00:11.558Z",
+          "blindIndex": "7af8435fa1384814711a4d91cf8d1ffe198a86082c6e107a4e4fb8edc16d1071"
+        }
+      ]
+    },
+    "p_mwlw5380_3o10i": {
+      "profile": {
+        "id": "p_mwlw5380_3o10i",
+        "name": "NovaFix_2240",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "createdAt": "2026-11-18T09:00:22.671Z",
+        "onboardingCompleted": true,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": [],
+        "username": "NovaFix_2240",
+        "usernameLower": "novafix_2240",
+        "usernameUpdatedAt": "2026-11-18T09:00:22.671Z",
+        "nextUsernameChangeAt": "2026-11-25T09:00:22.671Z",
+        "isFirebaseLinked": false
+      },
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T09:00:22.671Z",
+          "blindIndex": "aeaeab08117f552a44287c1cea52d12cc25a3ff88faafc83793adcd311752b7f"
+        }
+      ]
+    },
+    "u_9220e9ed17f71be6": {
+      "profile": {
+        "id": "u_9220e9ed17f71be6",
+        "name": "player_a_46912",
+        "username": "player_a_46912",
+        "usernameLower": "player_a_46912",
+        "avatarId": 1,
+        "accentColor": "#C84B31",
+        "authMethod": "password",
+        "createdAt": "2026-11-18T09:27:26.952Z",
+        "usernameUpdatedAt": "2026-11-18T09:27:26.952Z",
+        "nextUsernameChangeAt": "2026-11-25T09:27:26.952Z",
+        "onboardingCompleted": true,
+        "isFirebaseLinked": false,
+        "hasPin": false,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": []
+      },
+      "passwordHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$VcwLM3K12u5mKovEfre52Q$0O2yzrRj/3pFwYOcdkeoE56H1hLkVeT8V+3k3gWZ13g",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T09:27:26.952Z",
+          "blindIndex": "946b4b30a0cc594e60691710724e7b02f50bde552caaf23d3c2e56735c857563"
+        }
+      ]
+    },
+    "u_d0f16723fdbf6696": {
+      "profile": {
+        "id": "u_d0f16723fdbf6696",
+        "name": "player_a_55833",
+        "username": "player_a_55833",
+        "usernameLower": "player_a_55833",
+        "avatarId": 1,
+        "accentColor": "#C84B31",
+        "authMethod": "password",
+        "createdAt": "2026-11-18T09:27:35.943Z",
+        "usernameUpdatedAt": "2026-11-18T09:27:35.943Z",
+        "nextUsernameChangeAt": "2026-11-25T09:27:35.943Z",
+        "onboardingCompleted": true,
+        "isFirebaseLinked": false,
+        "hasPin": false,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": []
+      },
+      "passwordHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$s18xn9gITEY63/DGpVnV0A$v37bqI6OttJNDGo2VWG5dK7yaoFC8uYfVMi903qhqL0",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T09:27:35.943Z",
+          "blindIndex": "6972a62350d740cfdb7c9f685bf2773d7c2305d1ff309ffebe75735eff034510"
+        }
+      ]
+    },
+    "u_c68341e47a9607a2": {
+      "profile": {
+        "id": "u_c68341e47a9607a2",
+        "name": "player_b_55833",
+        "username": "player_b_55833",
+        "usernameLower": "player_b_55833",
+        "avatarId": 2,
+        "accentColor": "#2D6A4F",
+        "authMethod": "password",
+        "createdAt": "2026-11-18T09:27:35.990Z",
+        "usernameUpdatedAt": "2026-11-18T09:27:35.990Z",
+        "nextUsernameChangeAt": "2026-11-25T09:27:35.990Z",
+        "onboardingCompleted": true,
+        "isFirebaseLinked": false,
+        "hasPin": false,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": []
+      },
+      "passwordHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$oVDtr4/mDjv0qYMWRHpLBA$GN+n+P8f1lgC5xWCijnKuIX98Yeqt6ohSegNityJUfM",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T09:27:35.990Z",
+          "blindIndex": "0d1518a66dc46029cc4fadb6e91a55b3d9c365e08b58ccfc73f159c89d83b540"
+        }
+      ]
+    },
+    "u_2aa89be45965ab1f": {
+      "profile": {
+        "id": "u_2aa89be45965ab1f",
+        "name": "faris_ui_99",
+        "username": "faris_ui_99",
+        "usernameLower": "faris_ui_99",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "authMethod": "password",
+        "createdAt": "2026-11-18T09:28:43.780Z",
+        "usernameUpdatedAt": "2026-11-18T09:28:43.780Z",
+        "nextUsernameChangeAt": "2026-11-25T09:28:43.780Z",
+        "onboardingCompleted": true,
+        "isFirebaseLinked": false,
+        "hasPin": false,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": []
+      },
+      "passwordHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$6F/l99/2AfQq7VP57xqnyw$pwH+v/YeZXp8FKLVMw/foxO6jba6Vuw8985iQ3XeEQg",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T09:28:43.780Z",
+          "blindIndex": "aba15365dadec9d1fb6d440ba13f4c76f155f3d7c6e40653024827cb011d7e95"
+        }
+      ]
+    },
+    "u_349f6d847a726031": {
+      "profile": {
+        "id": "u_349f6d847a726031",
+        "name": "noor_ui_77",
+        "username": "noor_ui_77",
+        "usernameLower": "noor_ui_77",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "authMethod": "password",
+        "createdAt": "2026-11-18T10:29:47.901Z",
+        "usernameUpdatedAt": "2026-11-18T10:29:47.901Z",
+        "nextUsernameChangeAt": "2026-11-25T10:29:47.901Z",
+        "onboardingCompleted": true,
+        "isFirebaseLinked": false,
+        "hasPin": false,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": []
+      },
+      "passwordHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$5jCXuS0A+NyXS2ApKG8bkA$dhLnrqXmrGYLt9ebBghpxHV/wrpIjZDidq9O9AJVI00",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-18T10:29:47.901Z",
+          "blindIndex": "4b6c6398df8ae467f07e27f675885e01c493a34cb588c4f9ee9948b72bfb2bad"
+        }
+      ]
+    },
+    "u_def9b8edf4867da9": {
+      "profile": {
+        "id": "u_def9b8edf4867da9",
+        "name": "majlis_alpha",
+        "username": "majlis_alpha",
+        "usernameLower": "majlis_alpha",
+        "avatarId": 0,
+        "accentColor": "#C84B31",
+        "authMethod": "password",
+        "createdAt": "2026-11-20T12:49:48.452Z",
+        "usernameUpdatedAt": "2026-11-20T12:49:48.452Z",
+        "nextUsernameChangeAt": "2026-11-27T12:49:48.452Z",
+        "onboardingCompleted": true,
+        "isFirebaseLinked": false,
+        "hasPin": false,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": []
+      },
+      "passwordHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$bLh9myDl99BOWo811gQj7w$Lp3BAhAv5FuBKPyo1nhuSDQBgWuQ/o+GkyvC2wQnRDY",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-20T12:49:48.452Z",
+          "blindIndex": "31f923278d5015fb66d619fec5d9e7298fd977a2739f213a067676b2d6ebe87c"
+        }
+      ]
+    },
+    "u_3bf7100396f58666": {
+      "profile": {
+        "id": "u_3bf7100396f58666",
+        "name": "majlis_beta",
+        "username": "majlis_beta",
+        "usernameLower": "majlis_beta",
+        "avatarId": 2,
+        "accentColor": "#2D6A4F",
+        "authMethod": "password",
+        "createdAt": "2026-11-20T12:49:48.501Z",
+        "usernameUpdatedAt": "2026-11-20T12:49:48.501Z",
+        "nextUsernameChangeAt": "2026-11-27T12:49:48.501Z",
+        "onboardingCompleted": true,
+        "isFirebaseLinked": false,
+        "hasPin": false,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "totalPoints": 0,
+        "gamesPlayed": {},
+        "unlockedAchievements": [],
+        "matchHistory": []
+      },
+      "passwordHashArgon2id": "$argon2id$v=19$m=19456,t=2,p=1$uvUTcBZnrsNipyv1PclacQ$iZKwP+Lyig1+//yUTI9BwUnPrmawmR8sBsoYOklfwZE",
+      "cooldownAudit": [
+        {
+          "at": "2026-11-20T12:49:48.501Z",
+          "blindIndex": "313c652cfbc38ce01e98ed89e8b9384cc31f6a017243fdd4e9e23b7b30f8883b"
+        }
+      ]
+    }
+  },
+  "usernameIndex": {
+    "0be5b90da10030769b4c0fd3de000efeeeacf18a6e89fa5a9f1d996b5a5c150c": {
+      "ownerId": "p_mwlvbbms_dpbdw",
+      "updatedAt": "2026-11-18T08:37:39.387Z"
+    },
+    "6abf9b3421cbc7e13a4ea55b6f874cf70916860c28429fcdd8888b307cd150d0": {
+      "ownerId": "p_mwlvh9fg_dthzn",
+      "updatedAt": "2026-11-18T08:41:51.940Z"
+    },
+    "1d13a20cd556b0b232ed04c5e08c79b6e64f7a75ffc32e78dd5431ba6f438806": {
+      "ownerId": "p_mwlw4lb7_ttrdt",
+      "updatedAt": "2026-11-18T08:59:59.594Z"
+    },
+    "7af8435fa1384814711a4d91cf8d1ffe198a86082c6e107a4e4fb8edc16d1071": {
+      "ownerId": "p_mwlw4ugi_f28f6",
+      "updatedAt": "2026-11-18T09:00:11.558Z"
+    },
+    "aeaeab08117f552a44287c1cea52d12cc25a3ff88faafc83793adcd311752b7f": {
+      "ownerId": "p_mwlw5380_3o10i",
+      "updatedAt": "2026-11-18T09:00:22.671Z"
+    },
+    "946b4b30a0cc594e60691710724e7b02f50bde552caaf23d3c2e56735c857563": {
+      "ownerId": "u_9220e9ed17f71be6",
+      "updatedAt": "2026-11-18T09:27:26.952Z"
+    },
+    "6972a62350d740cfdb7c9f685bf2773d7c2305d1ff309ffebe75735eff034510": {
+      "ownerId": "u_d0f16723fdbf6696",
+      "updatedAt": "2026-11-18T09:27:35.943Z"
+    },
+    "0d1518a66dc46029cc4fadb6e91a55b3d9c365e08b58ccfc73f159c89d83b540": {
+      "ownerId": "u_c68341e47a9607a2",
+      "updatedAt": "2026-11-18T09:27:35.990Z"
+    },
+    "aba15365dadec9d1fb6d440ba13f4c76f155f3d7c6e40653024827cb011d7e95": {
+      "ownerId": "u_2aa89be45965ab1f",
+      "updatedAt": "2026-11-18T09:28:43.780Z"
+    },
+    "4b6c6398df8ae467f07e27f675885e01c493a34cb588c4f9ee9948b72bfb2bad": {
+      "ownerId": "u_349f6d847a726031",
+      "updatedAt": "2026-11-18T10:29:47.901Z"
+    },
+    "31f923278d5015fb66d619fec5d9e7298fd977a2739f213a067676b2d6ebe87c": {
+      "ownerId": "u_def9b8edf4867da9",
+      "updatedAt": "2026-11-20T12:49:48.452Z"
+    },
+    "313c652cfbc38ce01e98ed89e8b9384cc31f6a017243fdd4e9e23b7b30f8883b": {
+      "ownerId": "u_3bf7100396f58666",
+      "updatedAt": "2026-11-20T12:49:48.501Z"
+    }
+  }
+}

@@ -1,0 +1,265 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Reusable Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidPublicProfile(data, userId) {
+      return data.keys().hasAll([
+        'uid',
+        'username',
+        'usernameLower',
+        'avatarId',
+        'accentColor',
+        'wins',
+        'losses',
+        'draws',
+        'totalPoints',
+        'gamesPlayedCount',
+        'unlockedAchievements',
+        'createdAt',
+        'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'uid',
+        'username',
+        'usernameLower',
+        'avatarId',
+        'customAvatarUrl',
+        'accentColor',
+        'wins',
+        'losses',
+        'draws',
+        'totalPoints',
+        'gamesPlayedCount',
+        'unlockedAchievements',
+        'usernameUpdatedAt',
+        'nextUsernameChangeAt',
+        'createdAt',
+        'updatedAt'
+      ])
+      && data.uid == request.auth.uid
+      && data.uid == userId
+      && isValidString(data.username, 3, 16)
+      && isValidString(data.usernameLower, 3, 16)
+      && data.avatarId is int && data.avatarId >= 0 && data.avatarId <= 24
+      && (!('customAvatarUrl' in data) || (
+        data.customAvatarUrl is string
+        && data.customAvatarUrl.size() <= 65000
+        && (data.customAvatarUrl == '' || data.customAvatarUrl.matches('^data:image\\/.*'))
+      ))
+      && isValidString(data.accentColor, 4, 16)
+      && data.wins is int && data.wins >= 0 && data.wins <= 1000000
+      && data.losses is int && data.losses >= 0 && data.losses <= 1000000
+      && data.draws is int && data.draws >= 0 && data.draws <= 1000000
+      && data.totalPoints is int && data.totalPoints >= 0 && data.totalPoints <= 100000000
+      && data.gamesPlayedCount is int && data.gamesPlayedCount >= 0 && data.gamesPlayedCount <= 1000000
+      && data.unlockedAchievements is list && data.unlockedAchievements.size() <= 50
+      && (data.unlockedAchievements.size() == 0 || isValidString(data.unlockedAchievements[0], 1, 64))
+      && (!('usernameUpdatedAt' in data) || isValidString(data.usernameUpdatedAt, 10, 40))
+      && (!('nextUsernameChangeAt' in data) || isValidString(data.nextUsernameChangeAt, 10, 40))
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateAccount(data, userId) {
+      return data.keys().hasAll([
+        'uid',
+        'lang',
+        'theme',
+        'audioMuted',
+        'sfxVolume',
+        'musicEnabled',
+        'musicVolume',
+        'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'uid',
+        'email',
+        'lang',
+        'theme',
+        'audioMuted',
+        'sfxVolume',
+        'musicEnabled',
+        'musicVolume',
+        'updatedAt'
+      ])
+      && data.uid == request.auth.uid
+      && data.uid == userId
+      && (!('email' in data) || isValidString(data.email, 3, 200))
+      && (data.lang == 'ar' || data.lang == 'en')
+      && (data.theme == 'light' || data.theme == 'dark' || data.theme == 'system')
+      && data.audioMuted is bool
+      && data.sfxVolume is number && data.sfxVolume >= 0 && data.sfxVolume <= 1
+      && data.musicEnabled is bool
+      && data.musicVolume is number && data.musicVolume >= 0 && data.musicVolume <= 1
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidMatchHistoryItem(data, userId) {
+      return data.keys().hasAll([
+        'uid',
+        'gameId',
+        'mode',
+        'outcome',
+        'pointsEarned',
+        'playedAt',
+        'createdAt'
+      ])
+      && data.keys().hasOnly([
+        'uid',
+        'gameId',
+        'mode',
+        'outcome',
+        'pointsEarned',
+        'opponentLabel',
+        'playedAt',
+        'createdAt'
+      ])
+      && data.uid == request.auth.uid
+      && data.uid == userId
+      && isValidString(data.gameId, 2, 48)
+      && (data.mode == 'solo' || data.mode == 'local' || data.mode == 'online')
+      && (data.outcome == 'win' || data.outcome == 'loss' || data.outcome == 'draw')
+      && data.pointsEarned is int && data.pointsEarned >= 0 && data.pointsEarned <= 100000
+      && (!('opponentLabel' in data) || isValidString(data.opponentLabel, 1, 40))
+      && isValidString(data.playedAt, 10, 40)
+      && data.createdAt is timestamp;
+    }
+
+    // Connection validation document (read-only check used on app boot)
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    // Public User Profiles (no PII)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isSignedIn();
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+
+      allow create: if isValidId(userId)
+        && isVerifiedUser()
+        && isOwner(userId)
+        && isValidPublicProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId)
+        && isVerifiedUser()
+        && isOwner(userId)
+        && isValidPublicProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action: Update avatar, color, and match progress stats
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'avatarId',
+            'customAvatarUrl',
+            'accentColor',
+            'wins',
+            'losses',
+            'draws',
+            'totalPoints',
+            'gamesPlayedCount',
+            'unlockedAchievements',
+            'updatedAt'
+          ])
+          ||
+          // Action: Update username & cooldown timestamps
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'username',
+            'usernameLower',
+            'usernameUpdatedAt',
+            'nextUsernameChangeAt',
+            'updatedAt'
+          ])
+        );
+
+      allow delete: if false;
+
+      // Private PII & User Preferences (strictly owner-only)
+      match /private/{docId} {
+        allow get: if isValidId(userId) && isValidId(docId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+
+        allow create: if isValidId(userId)
+          && docId == 'account'
+          && isVerifiedUser()
+          && isOwner(userId)
+          && isValidPrivateAccount(incoming(), userId)
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+
+        allow update: if isValidId(userId)
+          && docId == 'account'
+          && isVerifiedUser()
+          && isOwner(userId)
+          && isValidPrivateAccount(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'email',
+            'lang',
+            'theme',
+            'audioMuted',
+            'sfxVolume',
+            'musicEnabled',
+            'musicVolume',
+            'updatedAt'
+          ]);
+
+        allow delete: if false;
+      }
+
+      // Match History Subcollection (strictly owner-only, immutable once recorded)
+      match /matches/{matchId} {
+        allow get: if isValidId(userId) && isValidId(matchId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.uid == request.auth.uid;
+
+        allow create: if isValidId(userId)
+          && isValidId(matchId)
+          && isVerifiedUser()
+          && isOwner(userId)
+          && isValidMatchHistoryItem(incoming(), userId)
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

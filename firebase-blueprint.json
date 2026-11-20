@@ -1,0 +1,237 @@
+{
+  "entities": {
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "Non-PII gamer identity card, unique username, aggregate stats, and unlocked achievement badges.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the profile owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "username": {
+          "type": "string",
+          "description": "Unique display username (3-16 characters).",
+          "minLength": 3,
+          "maxLength": 16
+        },
+        "usernameLower": {
+          "type": "string",
+          "description": "Normalized lowercase username.",
+          "minLength": 3,
+          "maxLength": 16
+        },
+        "avatarId": {
+          "type": "integer",
+          "description": "Selected vector avatar index."
+        },
+        "customAvatarUrl": {
+          "type": "string",
+          "description": "Optional compressed album portrait data URI (empty string when cleared).",
+          "maxLength": 65000
+        },
+        "accentColor": {
+          "type": "string",
+          "description": "Hex accent color for profile frame.",
+          "minLength": 4,
+          "maxLength": 16
+        },
+        "wins": {
+          "type": "integer",
+          "description": "Total wins."
+        },
+        "losses": {
+          "type": "integer",
+          "description": "Total losses."
+        },
+        "draws": {
+          "type": "integer",
+          "description": "Total draws."
+        },
+        "totalPoints": {
+          "type": "integer",
+          "description": "Cumulative score across all games."
+        },
+        "gamesPlayedCount": {
+          "type": "integer",
+          "description": "Total completed matches."
+        },
+        "unlockedAchievements": {
+          "type": "array",
+          "description": "Unlocked achievement IDs (max 50)."
+        },
+        "usernameUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of last username assignment."
+        },
+        "nextUsernameChangeAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when 7-day username cooldown expires."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of account creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last profile sync."
+        }
+      },
+      "required": [
+        "uid",
+        "username",
+        "usernameLower",
+        "avatarId",
+        "accentColor",
+        "wins",
+        "losses",
+        "draws",
+        "totalPoints",
+        "gamesPlayedCount",
+        "unlockedAchievements",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PrivateAccount": {
+      "title": "PrivateAccount",
+      "description": "Owner-only PII and persisted user preferences (language, appearance theme, audio settings).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Owner email address.",
+          "maxLength": 200
+        },
+        "lang": {
+          "type": "string",
+          "enum": ["ar", "en"],
+          "description": "Preferred UI language."
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark", "system"],
+          "description": "Preferred UI appearance mode."
+        },
+        "audioMuted": {
+          "type": "boolean",
+          "description": "Global audio mute toggle."
+        },
+        "sfxVolume": {
+          "type": "number",
+          "description": "SFX volume between 0 and 1."
+        },
+        "musicEnabled": {
+          "type": "boolean",
+          "description": "Ambient music toggle."
+        },
+        "musicVolume": {
+          "type": "number",
+          "description": "Music volume between 0 and 1."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last preference update."
+        }
+      },
+      "required": [
+        "uid",
+        "lang",
+        "theme",
+        "audioMuted",
+        "sfxVolume",
+        "musicEnabled",
+        "musicVolume",
+        "updatedAt"
+      ]
+    },
+    "MatchHistoryItem": {
+      "title": "MatchHistoryItem",
+      "description": "Completed match record belonging to a user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "gameId": {
+          "type": "string",
+          "description": "Identifier of the played mini-game.",
+          "minLength": 2,
+          "maxLength": 48
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["solo", "local", "online"],
+          "description": "Play mode."
+        },
+        "outcome": {
+          "type": "string",
+          "enum": ["win", "loss", "draw"],
+          "description": "Match result."
+        },
+        "pointsEarned": {
+          "type": "integer",
+          "description": "Points awarded."
+        },
+        "opponentLabel": {
+          "type": "string",
+          "description": "Optional opponent label.",
+          "maxLength": 40
+        },
+        "playedAt": {
+          "type": "string",
+          "description": "ISO date of match completion.",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server write timestamp."
+        }
+      },
+      "required": [
+        "uid",
+        "gameId",
+        "mode",
+        "outcome",
+        "pointsEarned",
+        "playedAt",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/PublicProfile" },
+      "description": "Public gamer profile card without PII."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/PrivateAccount" },
+      "description": "Owner-only PII and persisted application settings."
+    },
+    "/users/{userId}/matches/{matchId}": {
+      "schema": { "$ref": "#/entities/MatchHistoryItem" },
+      "description": "Owner-only match history subcollection."
+    }
+  }
+}

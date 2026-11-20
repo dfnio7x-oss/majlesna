@@ -1,0 +1,62 @@
+{
+  "friendships": [
+    {
+      "id": "fr_fb75b3d96162",
+      "a": "u_d0f16723fdbf6696",
+      "b": "u_c68341e47a9607a2",
+      "createdAt": "2026-11-18T09:27:36.133Z"
+    }
+  ],
+  "friendRequests": [
+    {
+      "id": "freq_1c321afc01a0",
+      "fromPlayerId": "u_d0f16723fdbf6696",
+      "toPlayerId": "u_c68341e47a9607a2",
+      "status": "accepted",
+      "createdAt": "2026-11-18T09:27:36.122Z"
+    }
+  ],
+  "groups": [
+    {
+      "id": "grp_d8a45d88a686",
+      "name": "Test Squad",
+      "ownerId": "u_d0f16723fdbf6696",
+      "memberIds": [
+        "u_d0f16723fdbf6696",
+        "u_c68341e47a9607a2"
+      ],
+      "accentColor": "#C84B31",
+      "createdAt": "2026-11-18T09:27:36.139Z",
+      "messages": [
+        {
+          "id": "gm_1794994056148_affbe0",
+          "groupId": "grp_d8a45d88a686",
+          "senderId": "u_d0f16723fdbf6696",
+          "senderUsername": "player_a_55833",
+          "senderAvatarId": 1,
+          "senderAccentColor": "#C84B31",
+          "type": "text",
+          "text": "Hello Squad!",
+          "createdAt": "2026-11-18T09:27:36.148Z"
+        },
+        {
+          "id": "gm_1794994056154_f9ea8f",
+          "groupId": "grp_d8a45d88a686",
+          "senderId": "u_d0f16723fdbf6696",
+          "senderUsername": "player_a_55833",
+          "senderAvatarId": 1,
+          "senderAccentColor": "#C84B31",
+          "type": "room_invite",
+          "text": "player_a_55833 → PRFNY9",
+          "roomInvite": {
+            "roomCode": "PRFNY9",
+            "roomName": "Squad Room",
+            "gameId": "xo",
+            "hostName": "player_a_55833"
+          },
+          "createdAt": "2026-11-18T09:27:36.154Z"
+        }
+      ]
+    }
+  ]
+}

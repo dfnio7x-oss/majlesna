@@ -1,0 +1,35 @@
+{
+  "id": "/",
+  "name": "مجلسنا — منصة الألعاب الجماعية",
+  "short_name": "مجلسنا",
+  "description": "منصة ألعاب جماعية متكاملة تضم ٥٧ لعبة تفاعلية للعب عبر الإنترنت أو على نفس الجهاز مع الأصدقاء والمجموعات",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "ar",
+  "theme_color": "#C84B31",
+  "background_color": "#FAF8F4",
+  "categories": ["games", "entertainment", "social"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
