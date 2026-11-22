@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Delete, Eye, Lightbulb, RotateCcw, Sparkles } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Delete, Eye, Lightbulb, RotateCcw, Sparkles } from 'lucide-react';
 import type { GameProps } from './GameShell';
 import {
   CROSSWORD_PUZZLES,
   LOGIC_GRID_SCENARIOS,
   PATTERN_BANK,
-  WORD_SEARCH_BANK,
+  WORD_SEARCH_BOARDS,
 } from '../../data/phase2Bank';
 import {
   canSlideTile,
@@ -17,7 +17,7 @@ import {
 import { soundEngine } from '../../utils/soundEngine';
 
 /* ============================================================================
- * 1. SUDOKU PARTY (4x4 Multi-board Speed Sudoku)
+ * 1. SUDOKU PARTY (10 Progressive 4x4 Boards)
  * ============================================================================ */
 const SUDOKU_PUZZLES: { given: number[]; solution: number[] }[] = [
   {
@@ -31,6 +31,34 @@ const SUDOKU_PUZZLES: { given: number[]; solution: number[] }[] = [
   {
     given: [4, 0, 2, 0, 0, 2, 0, 4, 2, 0, 4, 0, 0, 4, 0, 2],
     solution: [4, 1, 2, 3, 3, 2, 1, 4, 2, 3, 4, 1, 1, 4, 3, 2],
+  },
+  {
+    given: [0, 2, 0, 3, 3, 0, 2, 0, 2, 0, 3, 0, 0, 3, 0, 2],
+    solution: [1, 2, 4, 3, 3, 4, 2, 1, 2, 1, 3, 4, 4, 3, 1, 2],
+  },
+  {
+    given: [0, 0, 3, 2, 2, 3, 0, 0, 0, 2, 1, 0, 1, 0, 0, 3],
+    solution: [4, 1, 3, 2, 2, 3, 4, 1, 3, 2, 1, 4, 1, 4, 2, 3],
+  },
+  {
+    given: [3, 0, 0, 2, 0, 2, 3, 0, 2, 0, 0, 4, 0, 4, 1, 0],
+    solution: [3, 1, 4, 2, 4, 2, 3, 1, 2, 3, 1, 4, 1, 4, 2, 3],
+  },
+  {
+    given: [0, 4, 1, 0, 1, 0, 0, 4, 4, 0, 0, 1, 0, 1, 4, 0],
+    solution: [2, 4, 1, 3, 1, 3, 2, 4, 4, 2, 3, 1, 3, 1, 4, 2],
+  },
+  {
+    given: [2, 0, 0, 1, 0, 1, 2, 0, 0, 2, 4, 0, 4, 0, 0, 2],
+    solution: [2, 3, 1, 4, 4, 1, 2, 3, 1, 2, 4, 3, 3, 4, 2, 1],
+  },
+  {
+    given: [0, 1, 0, 4, 4, 0, 1, 0, 0, 3, 0, 2, 2, 0, 3, 0],
+    solution: [3, 1, 2, 4, 4, 2, 1, 3, 1, 3, 4, 2, 2, 4, 3, 1],
+  },
+  {
+    given: [0, 0, 2, 0, 2, 4, 0, 1, 0, 2, 0, 3, 3, 0, 1, 0],
+    solution: [1, 3, 2, 4, 2, 4, 3, 1, 4, 2, 1, 3, 3, 1, 4, 2],
   },
 ];
 
@@ -67,18 +95,21 @@ export const GameSudokuParty: React.FC<GameProps> = ({ lang, onFinish, onScorePr
     }
     if (isSudokuSolved(next)) {
       soundEngine.playPoint();
-      const roundPts = Math.max(40, 100 - Math.floor(elapsed / 2));
+      const roundPts = Math.max(35, 90 - Math.floor(elapsed / 4));
       const total = score + roundPts;
       setScore(total);
       onScoreProgress?.(total);
       if (puzzleIdx < SUDOKU_PUZZLES.length - 1) {
-        window.setTimeout(() => selectPuzzle(puzzleIdx + 1), 650);
+        window.setTimeout(() => selectPuzzle(puzzleIdx + 1), 600);
       } else {
         setDone(true);
         onFinish({
           outcome: 'win',
           score: total,
-          summaryText: lang === 'ar' ? `أنهيت جميع لوحات السودوكو في ${elapsed}ث` : `Solved all Sudoku boards in ${elapsed}s`,
+          summaryText:
+            lang === 'ar'
+              ? `أنهيت جميع لوحات السودوكو العشر في ${elapsed}ث`
+              : `Solved all 10 Sudoku boards in ${elapsed}s`,
         });
       }
     }
@@ -152,7 +183,7 @@ export const GameSudokuParty: React.FC<GameProps> = ({ lang, onFinish, onScorePr
 };
 
 /* ============================================================================
- * 2. SOLVE PUZZLE (Logic Deduction Grid)
+ * 2. SOLVE PUZZLE (10 Logic Deduction Grid Stages)
  * ============================================================================ */
 export const GameSolvePuzzle: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
   const [scenarioIdx, setScenarioIdx] = useState(0);
@@ -175,7 +206,7 @@ export const GameSolvePuzzle: React.FC<GameProps> = ({ lang, onFinish, onScorePr
     const correct = picks.every((val, i) => val === scenario.solution[i]);
     if (correct) {
       soundEngine.playPoint();
-      const nextScore = score + 40;
+      const nextScore = score + 35;
       setScore(nextScore);
       onScoreProgress?.(nextScore);
       if (scenarioIdx + 1 < LOGIC_GRID_SCENARIOS.length) {
@@ -184,12 +215,12 @@ export const GameSolvePuzzle: React.FC<GameProps> = ({ lang, onFinish, onScorePr
           setScenarioIdx((i) => i + 1);
           setPicks([0, 1, 2]);
           setFeedback(null);
-        }, 700);
+        }, 650);
       } else {
         onFinish({
           outcome: 'win',
           score: nextScore,
-          summaryText: lang === 'ar' ? 'حللت جميع ألغاز الاستنتاج المنطقي!' : 'Solved every logic deduction puzzle!',
+          summaryText: lang === 'ar' ? `حللت جميع ألغاز الاستنتاج الـ ${LOGIC_GRID_SCENARIOS.length}!` : `Solved all ${LOGIC_GRID_SCENARIOS.length} logic deduction puzzles!`,
         });
       }
     } else {
@@ -265,7 +296,7 @@ export const GameSolvePuzzle: React.FC<GameProps> = ({ lang, onFinish, onScorePr
 };
 
 /* ============================================================================
- * 3. SPOT THE DIFFERENCES (Dual SVG Visual Scenes)
+ * 3. SPOT THE DIFFERENCES (8 Handcrafted SVG Visual Scenes)
  * ============================================================================ */
 interface DiffHotspot {
   id: string;
@@ -291,21 +322,12 @@ const DIFFERENCE_SCENES: {
       <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
         <rect width="220" height="170" fill="#1F2937" />
         <path d="M0 130 Q60 110 120 128 T220 122 L220 170 L0 170 Z" fill="#D97706" opacity="0.85" />
-        {/* Moon / Sun difference */}
         <circle cx="185" cy="38" r={mod ? 16 : 12} fill={mod ? '#FDE68A' : '#FBBF24'} />
-        {/* Tent */}
         <polygon points="62,132 100,72 138,132" fill="#C84B31" />
         <polygon points="88,132 100,98 112,132" fill="#7C2D12" />
-        {/* Flag difference */}
-        {!mod ? (
-          <path d="M100 72 L100 54 L118 60 L100 66" fill="#34D399" />
-        ) : (
-          <path d="M100 72 L100 54 L118 60 L100 66" fill="#60A5FA" />
-        )}
-        {/* Cactus difference */}
+        <path d="M100 72 L100 54 L118 60 L100 66" fill={mod ? '#60A5FA' : '#34D399'} />
         <rect x="30" y="96" width="10" height="36" rx="5" fill="#2D6A4F" />
         {!mod && <rect x="20" y="106" width="12" height="6" rx="3" fill="#2D6A4F" />}
-        {/* Campfire difference */}
         <polygon points="142,148 150,126 158,148" fill={mod ? '#60A5FA' : '#F97316'} />
         <rect x="138" y="146" width="24" height="5" rx="2" fill="#78350F" />
       </svg>
@@ -323,18 +345,143 @@ const DIFFERENCE_SCENES: {
       <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
         <rect width="220" height="170" fill="#DBEAFE" />
         <rect y="112" width="220" height="58" fill="#2563EB" opacity="0.82" />
-        {/* Cloud difference */}
         <circle cx="48" cy="36" r="12" fill={mod ? '#FDE047' : '#FFFFFF'} />
         <circle cx="60" cy="36" r="10" fill={mod ? '#FDE047' : '#FFFFFF'} />
-        {/* Boat & sail difference */}
         <polygon points="88,118 152,118 142,134 98,134" fill="#92400E" />
         <polygon points="116,56 116,112 146,112" fill={mod ? '#C84B31' : '#FFFFFF'} />
-        {/* Bird difference */}
-        {!mod && (
-          <path d="M164 42 Q170 34 176 42 Q182 34 188 42" fill="none" stroke="#1E293B" strokeWidth="2.5" strokeLinecap="round" />
-        )}
-        {/* Buoy difference */}
+        {!mod && <path d="M164 42 Q170 34 176 42 Q182 34 188 42" fill="none" stroke="#1E293B" strokeWidth="2.5" strokeLinecap="round" />}
         <circle cx="48" cy="136" r={mod ? 9 : 6} fill={mod ? '#10B981' : '#EF4444'} />
+      </svg>
+    ),
+  },
+  {
+    title: { ar: 'أفق المدينة', en: 'City Skyline' },
+    hotspots: [
+      { id: 'sun', x: 38, y: 34, r: 20 },
+      { id: 'roof', x: 96, y: 46, r: 22 },
+      { id: 'win', x: 148, y: 92, r: 22 },
+      { id: 'car', x: 64, y: 146, r: 22 },
+    ],
+    renderScene: (mod) => (
+      <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
+        <rect width="220" height="170" fill="#0F172A" />
+        <circle cx="38" cy="34" r="14" fill={mod ? '#F97316' : '#FACC15'} />
+        <rect x="74" y="54" width="44" height="84" fill="#334155" />
+        {!mod && <polygon points="74,54 96,34 118,54" fill="#C84B31" />}
+        <rect x="130" y="72" width="42" height="66" fill="#475569" />
+        <rect x="142" y="84" width="12" height="14" fill={mod ? '#38BDF8' : '#FDE047'} />
+        <rect y="138" width="220" height="32" fill="#1E293B" />
+        <rect x="44" y="138" width="38" height="14" rx="4" fill={mod ? '#22C55E' : '#EF4444'} />
+        <circle cx="54" cy="153" r="5" fill="#94A3B8" />
+        <circle cx="72" cy="153" r="5" fill="#94A3B8" />
+      </svg>
+    ),
+  },
+  {
+    title: { ar: 'غرفة القراءة', en: 'Cozy Library' },
+    hotspots: [
+      { id: 'clock', x: 110, y: 36, r: 20 },
+      { id: 'lamp', x: 40, y: 74, r: 22 },
+      { id: 'book', x: 170, y: 92, r: 22 },
+      { id: 'rug', x: 110, y: 146, r: 24 },
+    ],
+    renderScene: (mod) => (
+      <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
+        <rect width="220" height="170" fill="#F5EBE0" />
+        <rect y="128" width="220" height="42" fill="#D5BDAF" />
+        <circle cx="110" cy="36" r="16" fill="#FFFFFF" stroke={mod ? '#C84B31' : '#1C1917'} strokeWidth="3" />
+        <line x1="110" y1="36" x2="110" y2="26" stroke="#1C1917" strokeWidth="2" />
+        <line x1="110" y1="36" x2={mod ? '102' : '118'} y2="36" stroke="#1C1917" strokeWidth="2" />
+        <polygon points="26,78 54,78 46,58 34,58" fill={mod ? '#2B4C7E' : '#F59E0B'} />
+        <rect x="38" y="78" width="4" height="50" fill="#78350F" />
+        <rect x="148" y="70" width="46" height="58" fill="#8D6E63" />
+        <rect x="164" y="78" width="12" height="24" fill={mod ? '#22C55E' : '#EF4444'} />
+        <ellipse cx="110" cy="148" rx={mod ? 42 : 56} ry="12" fill={mod ? '#7C3AED' : '#C84B31'} />
+      </svg>
+    ),
+  },
+  {
+    title: { ar: 'بستان الربيع', en: 'Orchard Garden' },
+    hotspots: [
+      { id: 'crown', x: 56, y: 66, r: 24 },
+      { id: 'apple', x: 162, y: 64, r: 20 },
+      { id: 'fence', x: 108, y: 120, r: 22 },
+      { id: 'flower', x: 176, y: 142, r: 20 },
+    ],
+    renderScene: (mod) => (
+      <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
+        <rect width="220" height="170" fill="#E0F2FE" />
+        <rect y="122" width="220" height="48" fill="#4ADE80" />
+        <rect x="48" y="92" width="14" height="36" fill="#78350F" />
+        <circle cx="55" cy="68" r="26" fill={mod ? '#15803D' : '#22C55E'} />
+        <rect x="155" y="92" width="14" height="36" fill="#78350F" />
+        <circle cx="162" cy="68" r="24" fill="#22C55E" />
+        {!mod && <circle cx="162" cy="64" r="6" fill="#EF4444" />}
+        <rect x="86" y="106" width="46" height="24" fill="#FFFFFF" stroke="#94A3B8" />
+        {mod && <rect x="104" y="106" width="10" height="24" fill="#C84B31" />}
+        <circle cx="176" cy="142" r="8" fill={mod ? '#A855F7' : '#FACC15'} />
+      </svg>
+    ),
+  },
+  {
+    title: { ar: 'محطة الفضاء', en: 'Orbit Station' },
+    hotspots: [
+      { id: 'planet', x: 48, y: 46, r: 24 },
+      { id: 'wing', x: 162, y: 58, r: 22 },
+      { id: 'window', x: 112, y: 92, r: 20 },
+      { id: 'star', x: 178, y: 136, r: 20 },
+    ],
+    renderScene: (mod) => (
+      <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
+        <rect width="220" height="170" fill="#090D16" />
+        <circle cx="48" cy="46" r="20" fill={mod ? '#EC4899' : '#38BDF8'} />
+        <ellipse cx="48" cy="46" rx="30" ry="6" fill="none" stroke="#FDE047" strokeWidth="2.5" />
+        <rect x="82" y="76" width="60" height="32" rx="12" fill="#E2E8F0" />
+        <circle cx="112" cy="92" r="10" fill={mod ? '#EF4444' : '#2563EB'} />
+        <rect x="148" y="42" width="28" height="34" fill={mod ? '#F59E0B' : '#3B82F6'} />
+        {!mod && <polygon points="178,124 182,134 192,136 182,140 178,150 174,140 164,136 174,134" fill="#FACC15" />}
+      </svg>
+    ),
+  },
+  {
+    title: { ar: 'القطب المتجمد', en: 'Arctic Igloo' },
+    hotspots: [
+      { id: 'aurora', x: 70, y: 28, r: 22 },
+      { id: 'door', x: 110, y: 112, r: 22 },
+      { id: 'fish', x: 42, y: 138, r: 20 },
+      { id: 'flag', x: 176, y: 84, r: 22 },
+    ],
+    renderScene: (mod) => (
+      <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
+        <rect width="220" height="170" fill="#0F172A" />
+        <path d="M20 34 Q70 10 140 34" fill="none" stroke={mod ? '#A855F7' : '#34D399'} strokeWidth="7" strokeLinecap="round" />
+        <rect y="122" width="220" height="48" fill="#E0F2FE" />
+        <path d="M64 126 A46 46 0 0 1 156 126 Z" fill="#FFFFFF" stroke="#BAE6FD" strokeWidth="2" />
+        <path d="M96 126 A14 14 0 0 1 124 126 Z" fill={mod ? '#C84B31' : '#1E293B'} />
+        <ellipse cx="42" cy="142" rx="14" ry="7" fill={mod ? '#F97316' : '#38BDF8'} />
+        <rect x="172" y="72" width="4" height="50" fill="#64748B" />
+        {!mod && <polygon points="176,72 198,80 176,88" fill="#EF4444" />}
+      </svg>
+    ),
+  },
+  {
+    title: { ar: 'أهرامات الوادي', en: 'Ancient Pyramids' },
+    hotspots: [
+      { id: 'disc', x: 176, y: 34, r: 20 },
+      { id: 'peak', x: 86, y: 54, r: 22 },
+      { id: 'palm', x: 34, y: 108, r: 22 },
+      { id: 'oasis', x: 158, y: 146, r: 22 },
+    ],
+    renderScene: (mod) => (
+      <svg viewBox="0 0 220 170" className="w-full h-auto rounded-xl border border-[#E5DEC9] dark:border-[#342E28]">
+        <rect width="220" height="170" fill="#FEF3C7" />
+        <circle cx="176" cy="34" r={mod ? 17 : 12} fill={mod ? '#C84B31' : '#F59E0B'} />
+        <rect y="128" width="220" height="42" fill="#FDE68A" />
+        <polygon points="36,130 86,52 136,130" fill="#D97706" />
+        {mod && <polygon points="75,69 86,52 97,69" fill="#FFFFFF" />}
+        <rect x="30" y="96" width="6" height="34" fill="#78350F" />
+        <circle cx="33" cy="92" r="12" fill={mod ? '#0D9488' : '#16A34A'} />
+        <ellipse cx="158" cy="148" rx="34" ry="10" fill={mod ? '#16A34A' : '#0284C7'} />
       </svg>
     ),
   },
@@ -358,7 +505,7 @@ export const GameSpotDifferences: React.FC<GameProps> = ({ lang, onFinish, onSco
     if (hit) {
       soundEngine.playPoint();
       const nextFound = [...foundIds, hit.id];
-      const nextScore = score + 25;
+      const nextScore = score + 20;
       setFoundIds(nextFound);
       setScore(nextScore);
       onScoreProgress?.(nextScore);
@@ -368,15 +515,18 @@ export const GameSpotDifferences: React.FC<GameProps> = ({ lang, onFinish, onSco
           window.setTimeout(() => {
             setSceneIdx((i) => i + 1);
             setFoundIds([]);
-          }, 700);
+          }, 650);
         } else {
           window.setTimeout(() => {
             onFinish({
               outcome: 'win',
               score: nextScore,
-              summaryText: lang === 'ar' ? 'اكتشفت كل الاختلافات بدقة!' : 'Spotted every visual difference!',
+              summaryText:
+                lang === 'ar'
+                  ? `اكتشفت كل الاختلافات في جميع المشاهد الثمانية!`
+                  : `Spotted every difference across all 8 scenes!`,
             });
-          }, 500);
+          }, 450);
         }
       }
     } else {
@@ -387,7 +537,7 @@ export const GameSpotDifferences: React.FC<GameProps> = ({ lang, onFinish, onSco
   return (
     <div className="max-w-2xl mx-auto space-y-4 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3] bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-xl px-4 py-2.5">
-        <span>{scene.title[lang]}</span>
+        <span>{scene.title[lang]} ({sceneIdx + 1}/{DIFFERENCE_SCENES.length})</span>
         <span className="font-mono-tabular text-[#C84B31]">
           {foundIds.length}/{scene.hotspots.length}
         </span>
@@ -437,7 +587,7 @@ export const GameSpotDifferences: React.FC<GameProps> = ({ lang, onFinish, onSco
 };
 
 /* ============================================================================
- * 4. COMPLETE PATTERN
+ * 4. COMPLETE PATTERN (18 Stages)
  * ============================================================================ */
 export const GameCompletePattern: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
   const [idx, setIdx] = useState(0);
@@ -449,7 +599,7 @@ export const GameCompletePattern: React.FC<GameProps> = ({ lang, onFinish, onSco
     if (picked !== null) return;
     setPicked(optIdx);
     const correct = optIdx === q.answerIndex;
-    const nextScore = correct ? score + 25 : score;
+    const nextScore = correct ? score + 22 : score;
     if (correct) {
       soundEngine.playPoint();
       setScore(nextScore);
@@ -460,7 +610,7 @@ export const GameCompletePattern: React.FC<GameProps> = ({ lang, onFinish, onSco
     window.setTimeout(() => {
       if (idx + 1 >= PATTERN_BANK.length) {
         onFinish({
-          outcome: nextScore >= 75 ? 'win' : 'draw',
+          outcome: nextScore >= 180 ? 'win' : 'draw',
           score: nextScore,
           summaryText: `${nextScore} pts`,
         });
@@ -468,7 +618,7 @@ export const GameCompletePattern: React.FC<GameProps> = ({ lang, onFinish, onSco
         setIdx((i) => i + 1);
         setPicked(null);
       }
-    }, 1000);
+    }, 850);
   };
 
   return (
@@ -521,33 +671,45 @@ export const GameCompletePattern: React.FC<GameProps> = ({ lang, onFinish, onSco
 };
 
 /* ============================================================================
- * 5. NUMBER ORDERING (Solvable 3x3 Sliding Puzzle)
+ * 5. NUMBER ORDERING (5-Stage Escalating 3x3 -> 4x4 Sliding Puzzle Ladder)
  * ============================================================================ */
-function makeShuffledTiles(): number[] {
-  const arr = [1, 2, 3, 4, 5, 6, 7, 8, 0];
-  let empty = 8;
-  for (let step = 0; step < 36; step++) {
-    const r = Math.floor(empty / 3);
-    const c = empty % 3;
+const SLIDING_STAGES = [
+  { size: 3, shuffles: 20, reward: 60 },
+  { size: 3, shuffles: 42, reward: 80 },
+  { size: 4, shuffles: 24, reward: 100 },
+  { size: 4, shuffles: 44, reward: 125 },
+  { size: 4, shuffles: 68, reward: 160 },
+];
+
+function makeShuffledTiles(size: number, steps: number): number[] {
+  const total = size * size;
+  const arr = Array.from({ length: total }, (_, i) => (i + 1) % total);
+  let empty = total - 1;
+  for (let step = 0; step < steps; step++) {
+    const r = Math.floor(empty / size);
+    const c = empty % size;
     const neighbors: number[] = [];
-    if (r > 0) neighbors.push((r - 1) * 3 + c);
-    if (r < 2) neighbors.push((r + 1) * 3 + c);
-    if (c > 0) neighbors.push(r * 3 + (c - 1));
-    if (c < 2) neighbors.push(r * 3 + (c + 1));
+    if (r > 0) neighbors.push((r - 1) * size + c);
+    if (r < size - 1) neighbors.push((r + 1) * size + c);
+    if (c > 0) neighbors.push(r * size + (c - 1));
+    if (c < size - 1) neighbors.push(r * size + (c + 1));
     const pick = neighbors[Math.floor(Math.random() * neighbors.length)];
     [arr[empty], arr[pick]] = [arr[pick], arr[empty]];
     empty = pick;
   }
-  return isSlidingPuzzleSolved(arr) ? makeShuffledTiles() : arr;
+  return isSlidingPuzzleSolved(arr) ? makeShuffledTiles(size, steps + 2) : arr;
 }
 
-export const GameNumberOrdering: React.FC<GameProps> = ({ lang, onFinish }) => {
-  const [tiles, setTiles] = useState<number[]>(() => makeShuffledTiles());
+export const GameNumberOrdering: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const [stageIdx, setStageIdx] = useState(0);
+  const cfg = SLIDING_STAGES[stageIdx];
+  const [tiles, setTiles] = useState<number[]>(() => makeShuffledTiles(cfg.size, cfg.shuffles));
   const [moves, setMoves] = useState(0);
+  const [score, setScore] = useState(0);
 
   const handleTileClick = (idx: number) => {
     const emptyIdx = tiles.indexOf(0);
-    if (!canSlideTile(idx, emptyIdx, 3)) return;
+    if (!canSlideTile(idx, emptyIdx, cfg.size)) return;
     soundEngine.playClick();
     const next = [...tiles];
     [next[idx], next[emptyIdx]] = [next[emptyIdx], next[idx]];
@@ -557,24 +719,49 @@ export const GameNumberOrdering: React.FC<GameProps> = ({ lang, onFinish }) => {
 
     if (isSlidingPuzzleSolved(next)) {
       soundEngine.playPoint();
-      const score = Math.max(40, 120 - nextMoves);
-      onFinish({
-        outcome: 'win',
-        score,
-        summaryText: lang === 'ar' ? `رتّبت الشبكة خلال ${nextMoves} حركة!` : `Ordered the grid in ${nextMoves} moves!`,
-      });
+      const stagePts = Math.max(30, cfg.reward - Math.floor(nextMoves / 2));
+      const nextScore = score + stagePts;
+      setScore(nextScore);
+      onScoreProgress?.(nextScore);
+
+      if (stageIdx + 1 < SLIDING_STAGES.length) {
+        const nextStageIdx = stageIdx + 1;
+        const nextCfg = SLIDING_STAGES[nextStageIdx];
+        window.setTimeout(() => {
+          setStageIdx(nextStageIdx);
+          setTiles(makeShuffledTiles(nextCfg.size, nextCfg.shuffles));
+          setMoves(0);
+        }, 550);
+      } else {
+        onFinish({
+          outcome: 'win',
+          score: nextScore,
+          summaryText:
+            lang === 'ar'
+              ? `أنهيت جميع مراحل الترتيب الخمس (3x3 إلى 4x4)!`
+              : `Cleared all 5 sliding stages (3x3 to 4x4)!`,
+        });
+      }
     }
   };
 
   return (
     <div className="max-w-xs mx-auto space-y-5 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3] bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-xl px-4 py-2.5">
-        <span>{lang === 'ar' ? 'الحركات:' : 'Moves:'} <strong className="font-mono-tabular text-[#C84B31]">{moves}</strong></span>
+        <span>
+          {lang === 'ar'
+            ? `المرحلة ${stageIdx + 1}/${SLIDING_STAGES.length} (${cfg.size}×${cfg.size})`
+            : `Stage ${stageIdx + 1}/${SLIDING_STAGES.length} (${cfg.size}×${cfg.size})`}
+        </span>
+        <span>
+          <strong className="font-mono-tabular text-[#C84B31]">{moves}</strong>{' '}
+          {lang === 'ar' ? 'حركة' : 'moves'}
+        </span>
         <button
           type="button"
           onClick={() => {
             soundEngine.playClick();
-            setTiles(makeShuffledTiles());
+            setTiles(makeShuffledTiles(cfg.size, cfg.shuffles));
             setMoves(0);
           }}
           className="flex items-center gap-1 text-[#2B4C7E] dark:text-[#60A5FA] cursor-pointer"
@@ -584,14 +771,20 @@ export const GameNumberOrdering: React.FC<GameProps> = ({ lang, onFinish }) => {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2.5 p-3 rounded-2xl bg-[#E5DEC9] dark:bg-[#342E28]" dir="ltr">
+      <div
+        className="grid gap-2 p-3 rounded-2xl bg-[#E5DEC9] dark:bg-[#342E28]"
+        style={{ gridTemplateColumns: `repeat(${cfg.size}, minmax(0, 1fr))` }}
+        dir="ltr"
+      >
         {tiles.map((num, idx) => (
           <button
             key={idx}
             type="button"
             disabled={num === 0}
             onClick={() => handleTileClick(idx)}
-            className={`aspect-square rounded-xl font-mono-tabular text-2xl font-bold flex items-center justify-center transition-all ${
+            className={`aspect-square rounded-xl font-mono-tabular font-bold flex items-center justify-center transition-all ${
+              cfg.size === 4 ? 'text-lg' : 'text-2xl'
+            } ${
               num === 0
                 ? 'bg-transparent cursor-default'
                 : 'bg-white dark:bg-[#1E1B18] text-[#1C1917] dark:text-[#F5F2EB] border border-[#D4CBB3] dark:border-[#443D35] hover:border-[#C84B31] tactile-btn cursor-pointer shadow-xs'
@@ -606,7 +799,7 @@ export const GameNumberOrdering: React.FC<GameProps> = ({ lang, onFinish }) => {
 };
 
 /* ============================================================================
- * 6. CRACK CODE (Mastermind 4-Peg Deduction)
+ * 6. CRACK CODE (4-Stage Mastermind Ladder: 3 -> 4 -> 4 -> 5 Pegs)
  * ============================================================================ */
 const CODE_COLORS = [
   { id: 'R', hex: '#C84B31' },
@@ -617,12 +810,26 @@ const CODE_COLORS = [
   { id: 'T', hex: '#0F766E' },
 ];
 
+const MASTERMIND_STAGES = [
+  { len: 3, maxAttempts: 7 },
+  { len: 4, maxAttempts: 8 },
+  { len: 4, maxAttempts: 8 },
+  { len: 5, maxAttempts: 10 },
+];
+
+function makeSecretCode(len: number): string[] {
+  return Array.from({ length: len }, () => CODE_COLORS[Math.floor(Math.random() * CODE_COLORS.length)].id);
+}
+
 export const GameCrackCode: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const [secret] = useState<string[]>(() =>
-    Array.from({ length: 4 }, () => CODE_COLORS[Math.floor(Math.random() * CODE_COLORS.length)].id)
+  const [stageIdx, setStageIdx] = useState(0);
+  const stageCfg = MASTERMIND_STAGES[stageIdx];
+  const [secret, setSecret] = useState<string[]>(() => makeSecretCode(stageCfg.len));
+  const [currentGuess, setCurrentGuess] = useState<string[]>(() =>
+    CODE_COLORS.slice(0, stageCfg.len).map((c) => c.id)
   );
-  const [currentGuess, setCurrentGuess] = useState<string[]>(['R', 'G', 'B', 'Y']);
   const [history, setHistory] = useState<{ guess: string[]; exact: number; misplaced: number }[]>([]);
+  const [totalScore, setTotalScore] = useState(0);
 
   const cycleSlot = (slotIdx: number) => {
     soundEngine.playClick();
@@ -639,21 +846,41 @@ export const GameCrackCode: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
     const nextHistory = [{ guess: [...currentGuess], ...fb }, ...history];
     setHistory(nextHistory);
 
-    if (fb.exact === 4) {
+    if (fb.exact === stageCfg.len) {
       soundEngine.playPoint();
-      const score = Math.max(40, 130 - nextHistory.length * 10);
-      onScoreProgress?.(score);
-      onFinish({
-        outcome: 'win',
-        score,
-        summaryText: lang === 'ar' ? `كسرت الشفرة في ${nextHistory.length} محاولة!` : `Cracked the code in ${nextHistory.length} attempts!`,
-      });
-    } else if (nextHistory.length >= 8) {
+      const stageScore = Math.max(30, 90 - (nextHistory.length - 1) * 8);
+      const nextTotal = totalScore + stageScore;
+      setTotalScore(nextTotal);
+      onScoreProgress?.(nextTotal);
+
+      if (stageIdx + 1 < MASTERMIND_STAGES.length) {
+        const nextIdx = stageIdx + 1;
+        const nextCfg = MASTERMIND_STAGES[nextIdx];
+        window.setTimeout(() => {
+          setStageIdx(nextIdx);
+          setSecret(makeSecretCode(nextCfg.len));
+          setCurrentGuess(CODE_COLORS.slice(0, nextCfg.len).map((c) => c.id));
+          setHistory([]);
+        }, 650);
+      } else {
+        onFinish({
+          outcome: 'win',
+          score: nextTotal,
+          summaryText:
+            lang === 'ar'
+              ? `كسرت جميع الشفرات الأربع (حتى ٥ ألوان)!`
+              : `Cracked all 4 cipher stages up to 5 pegs!`,
+        });
+      }
+    } else if (nextHistory.length >= stageCfg.maxAttempts) {
       soundEngine.playError();
       onFinish({
-        outcome: 'loss',
-        score: 20,
-        summaryText: lang === 'ar' ? `نفدت المحاولات الثماني!` : `Out of 8 attempts!`,
+        outcome: stageIdx >= 2 ? 'draw' : 'loss',
+        score: Math.max(20, totalScore),
+        summaryText:
+          lang === 'ar'
+            ? `توقفت عند الشفرة ${stageIdx + 1}/${MASTERMIND_STAGES.length}`
+            : `Stopped at Stage ${stageIdx + 1}/${MASTERMIND_STAGES.length}`,
       });
     } else {
       soundEngine.playClick();
@@ -663,11 +890,18 @@ export const GameCrackCode: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
   return (
     <div className="max-w-md mx-auto space-y-5">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3] bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-xl px-4 py-2.5">
-        <span>{lang === 'ar' ? 'اضغط على الدوائر لتغيير اللون' : 'Tap pegs to cycle colors'}</span>
-        <span className="font-mono-tabular text-[#C84B31]">{history.length}/8</span>
+        <span>
+          {lang === 'ar'
+            ? `المرحلة ${stageIdx + 1}/${MASTERMIND_STAGES.length} (${stageCfg.len} ألوان)`
+            : `Stage ${stageIdx + 1}/${MASTERMIND_STAGES.length} (${stageCfg.len} pegs)`}
+        </span>
+        <span className="font-mono-tabular text-[#C84B31]">
+          {history.length}/{stageCfg.maxAttempts}
+        </span>
+        <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{totalScore} pts</span>
       </div>
 
-      <div className="flex items-center justify-center gap-3" dir="ltr">
+      <div className="flex flex-wrap items-center justify-center gap-2.5" dir="ltr">
         {currentGuess.map((cid, idx) => {
           const hex = CODE_COLORS.find((c) => c.id === cid)?.hex ?? '#C84B31';
           return (
@@ -675,7 +909,7 @@ export const GameCrackCode: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
               key={idx}
               type="button"
               onClick={() => cycleSlot(idx)}
-              className="w-12 h-12 rounded-full border-2 border-white dark:border-[#1E1B18] shadow-md cursor-pointer transition-transform hover:scale-105"
+              className="w-11 h-11 rounded-full border-2 border-white dark:border-[#1E1B18] shadow-md cursor-pointer transition-transform hover:scale-105"
               style={{ backgroundColor: hex }}
             />
           );
@@ -683,7 +917,7 @@ export const GameCrackCode: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
         <button
           type="button"
           onClick={submitGuess}
-          className="h-12 px-4 rounded-xl bg-[#1C1917] dark:bg-[#C84B31] text-white text-xs font-semibold tactile-btn cursor-pointer"
+          className="h-11 px-4 rounded-xl bg-[#1C1917] dark:bg-[#C84B31] text-white text-xs font-semibold tactile-btn cursor-pointer"
         >
           {lang === 'ar' ? 'اختبر' : 'Check'}
         </button>
@@ -717,7 +951,7 @@ export const GameCrackCode: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
 };
 
 /* ============================================================================
- * 7. STRONGEST MEMORY (Simon Musical Sequence)
+ * 7. STRONGEST MEMORY (15 Accelerating Simon Musical Levels)
  * ============================================================================ */
 const SIMON_PADS = [
   { id: 0, color: '#C84B31', label: { ar: 'أحمر', en: 'Ruby' } },
@@ -725,6 +959,8 @@ const SIMON_PADS = [
   { id: 2, color: '#2B4C7E', label: { ar: 'أزرق', en: 'Sapphire' } },
   { id: 3, color: '#D97706', label: { ar: 'ذهبي', en: 'Amber' } },
 ];
+
+const MAX_SIMON_LEVELS = 15;
 
 export const GameStrongestMemory: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
   const [sequence, setSequence] = useState<number[]>(() => [Math.floor(Math.random() * 4)]);
@@ -736,17 +972,19 @@ export const GameStrongestMemory: React.FC<GameProps> = ({ lang, onFinish, onSco
   useEffect(() => {
     let cancelled = false;
     setPlayingDemo(true);
+    const stepMs = Math.max(250, 520 - sequence.length * 18);
+    const holdMs = Math.max(180, 350 - sequence.length * 10);
     sequence.forEach((pad, idx) => {
       window.setTimeout(() => {
         if (cancelled) return;
         setLitPad(pad);
         soundEngine.playClick();
-      }, idx * 520 + 250);
+      }, idx * stepMs + 220);
       window.setTimeout(() => {
         if (cancelled) return;
         setLitPad(null);
         if (idx === sequence.length - 1) setPlayingDemo(false);
-      }, idx * 520 + 620);
+      }, idx * stepMs + 220 + holdMs);
     });
     return () => {
       cancelled = true;
@@ -756,28 +994,34 @@ export const GameStrongestMemory: React.FC<GameProps> = ({ lang, onFinish, onSco
   const handlePadTap = (padId: number) => {
     if (playingDemo) return;
     setLitPad(padId);
-    window.setTimeout(() => setLitPad(null), 180);
+    window.setTimeout(() => setLitPad(null), 160);
 
     if (padId !== sequence[userStep]) {
       soundEngine.playError();
       onFinish({
-        outcome: score >= 60 ? 'win' : 'draw',
+        outcome: sequence.length - 1 >= 6 ? 'win' : 'draw',
         score,
-        summaryText: lang === 'ar' ? `حفظت سلسلة من ${sequence.length - 1} خطوات!` : `Memorized a sequence of ${sequence.length - 1}!`,
+        summaryText:
+          lang === 'ar'
+            ? `حفظت سلسلة من ${sequence.length - 1} خطوات من أصل ${MAX_SIMON_LEVELS}!`
+            : `Memorized a sequence of ${sequence.length - 1} / ${MAX_SIMON_LEVELS}!`,
       });
       return;
     }
 
     soundEngine.playPoint();
     if (userStep + 1 >= sequence.length) {
-      const nextScore = score + 20;
+      const nextScore = score + 18 + sequence.length * 2;
       setScore(nextScore);
       onScoreProgress?.(nextScore);
-      if (sequence.length >= 6) {
+      if (sequence.length >= MAX_SIMON_LEVELS) {
         onFinish({
           outcome: 'win',
-          score: nextScore + 30,
-          summaryText: lang === 'ar' ? 'ذاكرة فولاذية! أكملت 6 مستويات!' : 'Unbreakable memory across all 6 stages!',
+          score: nextScore + 40,
+          summaryText:
+            lang === 'ar'
+              ? `ذاكرة خارقة! أكملت جميع الـ ${MAX_SIMON_LEVELS} مستوى!`
+              : `Unbreakable memory across all ${MAX_SIMON_LEVELS} levels!`,
         });
       } else {
         setUserStep(0);
@@ -791,7 +1035,7 @@ export const GameStrongestMemory: React.FC<GameProps> = ({ lang, onFinish, onSco
   return (
     <div className="max-w-sm mx-auto space-y-5 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3] bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-xl px-4 py-2.5">
-        <span>{lang === 'ar' ? `السلسلة: ${sequence.length}` : `Length: ${sequence.length}`}</span>
+        <span>{lang === 'ar' ? `المستوى: ${sequence.length}/${MAX_SIMON_LEVELS}` : `Level: ${sequence.length}/${MAX_SIMON_LEVELS}`}</span>
         <span>{playingDemo ? (lang === 'ar' ? 'شاهد النمط...' : 'Watch...') : (lang === 'ar' ? 'دورك الآن!' : 'Your turn!')}</span>
         <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
       </div>
@@ -820,16 +1064,17 @@ export const GameStrongestMemory: React.FC<GameProps> = ({ lang, onFinish, onSco
 };
 
 /* ============================================================================
- * 8. CROSSWORD CHALLENGE (4x4 Interactive Bilingual Mini Crossword)
+ * 8. CROSSWORD CHALLENGE (All 6 Bilingual Mini Crosswords Campaign)
  * ============================================================================ */
-export const GameCrosswordChallenge: React.FC<GameProps> = ({ lang, onFinish }) => {
-  const puzzles = CROSSWORD_PUZZLES[lang];
-  const [pIdx] = useState(() => Math.floor(Math.random() * puzzles.length));
+export const GameCrosswordChallenge: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const puzzles = useMemo(() => [...CROSSWORD_PUZZLES[lang]], [lang]);
+  const [pIdx, setPIdx] = useState(0);
   const puzzle = puzzles[pIdx];
   const [entries, setEntries] = useState<string[][]>(() =>
     puzzle.grid.map((row) => row.map((ch) => (ch === '#' ? '#' : '')))
   );
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [score, setScore] = useState(0);
 
   const updateCell = (r: number, c: number, raw: string) => {
     const char = Array.from(raw.trim().toUpperCase()).slice(-1)[0] ?? '';
@@ -851,11 +1096,27 @@ export const GameCrosswordChallenge: React.FC<GameProps> = ({ lang, onFinish }) 
     );
     if (correctCells === totalCells) {
       soundEngine.playPoint();
-      onFinish({
-        outcome: 'win',
-        score: 110,
-        summaryText: lang === 'ar' ? 'أكملت الكلمات المتقاطعة بنجاح!' : 'Completed the mini crossword!',
-      });
+      const nextScore = score + 50;
+      setScore(nextScore);
+      onScoreProgress?.(nextScore);
+      if (pIdx + 1 < puzzles.length) {
+        const nextPuzzle = puzzles[pIdx + 1];
+        setStatusMsg(lang === 'ar' ? 'أحسنت! جاري الانتقال للشبكة التالية...' : 'Great! Advancing to next crossword...');
+        window.setTimeout(() => {
+          setPIdx((i) => i + 1);
+          setEntries(nextPuzzle.grid.map((row) => row.map((ch) => (ch === '#' ? '#' : ''))));
+          setStatusMsg(null);
+        }, 650);
+      } else {
+        onFinish({
+          outcome: 'win',
+          score: nextScore,
+          summaryText:
+            lang === 'ar'
+              ? `أكملت جميع شبكات الكلمات المتقاطعة (${puzzles.length})!`
+              : `Completed all ${puzzles.length} mini crosswords!`,
+        });
+      }
     } else {
       soundEngine.playError();
       setStatusMsg(
@@ -869,6 +1130,11 @@ export const GameCrosswordChallenge: React.FC<GameProps> = ({ lang, onFinish }) 
   return (
     <div className="max-w-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
       <div className="space-y-4">
+        <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3] bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-xl px-4 py-2">
+          <span>{lang === 'ar' ? `الشبكة ${pIdx + 1}/${puzzles.length}` : `Grid ${pIdx + 1}/${puzzles.length}`}</span>
+          <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
+        </div>
+
         <div
           className="grid gap-1.5 max-w-[260px] mx-auto bg-[#E5DEC9] dark:bg-[#342E28] p-2 rounded-2xl"
           style={{ gridTemplateColumns: `repeat(${puzzle.size}, minmax(0, 1fr))` }}
@@ -932,18 +1198,21 @@ export const GameCrosswordChallenge: React.FC<GameProps> = ({ lang, onFinish }) 
 };
 
 /* ============================================================================
- * 9. HIDDEN WORD (6x6 Interactive Word Search Grid)
+ * 9. HIDDEN WORD (6-Board Word Search Expedition)
  * ============================================================================ */
 export const GameHiddenWord: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const bank = WORD_SEARCH_BANK[lang];
+  const boards = WORD_SEARCH_BOARDS[lang];
+  const [boardIdx, setBoardIdx] = useState(0);
+  const bank = boards[boardIdx];
   const [selectedCells, setSelectedCells] = useState<{ r: number; c: number; ch: string }[]>([]);
   const [foundWords, setFoundWords] = useState<string[]>([]);
   const [foundKeys, setFoundKeys] = useState<string[]>([]);
+  const [score, setScore] = useState(0);
 
   const toggleCell = (r: number, c: number, ch: string) => {
     soundEngine.playClick();
     const exists = selectedCells.findIndex((cell) => cell.r === r && cell.c === c);
-    let next = [...selectedCells];
+    const next = [...selectedCells];
     if (exists !== -1) {
       next.splice(exists, 1);
     } else {
@@ -957,14 +1226,27 @@ export const GameHiddenWord: React.FC<GameProps> = ({ lang, onFinish, onScorePro
       setFoundWords(updatedWords);
       setFoundKeys((prev) => [...prev, ...next.map((x) => `${x.r}-${x.c}`)]);
       setSelectedCells([]);
-      const pts = updatedWords.length * 20;
-      onScoreProgress?.(pts);
+      const nextScore = score + 15;
+      setScore(nextScore);
+      onScoreProgress?.(nextScore);
       if (updatedWords.length >= bank.words.length) {
-        onFinish({
-          outcome: 'win',
-          score: pts + 20,
-          summaryText: lang === 'ar' ? 'وجدت جميع الكلمات المخفية!' : 'Found every hidden word on the grid!',
-        });
+        if (boardIdx + 1 < boards.length) {
+          window.setTimeout(() => {
+            setBoardIdx((b) => b + 1);
+            setFoundWords([]);
+            setFoundKeys([]);
+            setSelectedCells([]);
+          }, 600);
+        } else {
+          onFinish({
+            outcome: 'win',
+            score: nextScore + 40,
+            summaryText:
+              lang === 'ar'
+                ? `وجدت جميع الكلمات المخفية عبر ${boards.length} لوحات!`
+                : `Found every hidden word across all ${boards.length} boards!`,
+          });
+        }
       }
     } else {
       setSelectedCells(next);
@@ -973,6 +1255,11 @@ export const GameHiddenWord: React.FC<GameProps> = ({ lang, onFinish, onScorePro
 
   return (
     <div className="max-w-lg mx-auto space-y-5">
+      <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3] bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-xl px-4 py-2">
+        <span>{lang === 'ar' ? `اللوحة ${boardIdx + 1}/${boards.length}` : `Board ${boardIdx + 1}/${boards.length}`}</span>
+        <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
+      </div>
+
       <div className="flex flex-wrap justify-center gap-2">
         {bank.words.map((word) => {
           const found = foundWords.includes(word);
@@ -1035,7 +1322,7 @@ export const GameHiddenWord: React.FC<GameProps> = ({ lang, onFinish, onScorePro
 };
 
 /* ============================================================================
- * 10. IMAGE PUZZLE (Progressive Tile Reveal Visual Riddle)
+ * 10. IMAGE PUZZLE (10 Custom SVG Tile-Reveal Visual Riddles)
  * ============================================================================ */
 const VISUAL_MYSTERIES = [
   {
@@ -1066,9 +1353,129 @@ const VISUAL_MYSTERIES = [
       </svg>
     ),
   },
+  {
+    options: { ar: ['سفينة شراعية', 'صاروخ فضائي', 'قطار سريع', 'برج إيفل'], en: ['Sailboat', 'Space Rocket', 'Express Train', 'Eiffel Tower'] },
+    answerIndex: 1,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#090D16" />
+        <polygon points="110,22 132,68 88,68" fill="#EF4444" />
+        <rect x="88" y="68" width="44" height="58" fill="#F8FAFC" />
+        <circle cx="110" cy="92" r="12" fill="#38BDF8" stroke="#1E293B" strokeWidth="3" />
+        <polygon points="88,108 66,132 88,126" fill="#EF4444" />
+        <polygon points="132,108 154,132 132,126" fill="#EF4444" />
+        <polygon points="96,126 110,164 124,126" fill="#F59E0B" />
+      </svg>
+    ),
+  },
+  {
+    options: { ar: ['قلعة حصينة', 'مسجد', 'محطة قطار', 'مصنع'], en: ['Stone Castle', 'Mosque', 'Train Station', 'Factory'] },
+    answerIndex: 0,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#DDD6FE" />
+        <rect y="138" width="220" height="42" fill="#22C55E" />
+        <rect x="58" y="72" width="104" height="68" fill="#94A3B8" />
+        <rect x="44" y="54" width="26" height="86" fill="#64748B" />
+        <rect x="150" y="54" width="26" height="86" fill="#64748B" />
+        <polygon points="40,54 57,30 74,54" fill="#C84B31" />
+        <polygon points="146,54 163,30 180,54" fill="#C84B31" />
+        <path d="M94 140 V106 A16 16 0 0 1 126 106 V140 Z" fill="#451A03" />
+      </svg>
+    ),
+  },
+  {
+    options: { ar: ['ساعة رملية', 'كأس ذهبي', 'مصباح يدوي', 'آلة تصوير'], en: ['Hourglass', 'Golden Trophy', 'Flashlight', 'Camera'] },
+    answerIndex: 3,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#FEF3C7" />
+        <rect x="52" y="58" width="116" height="74" rx="14" fill="#1E293B" />
+        <rect x="86" y="42" width="48" height="18" rx="4" fill="#334155" />
+        <circle cx="110" cy="95" r="26" fill="#94A3B8" />
+        <circle cx="110" cy="95" r="17" fill="#0F172A" />
+        <circle cx="104" cy="89" r="5" fill="#38BDF8" />
+        <circle cx="148" cy="72" r="5" fill="#FACC15" />
+      </svg>
+    ),
+  },
+  {
+    options: { ar: ['خيمة برية', 'سفينة قرصان', 'هرم', 'قوس قزح'], en: ['Camping Tent', 'Pirate Ship', 'Pyramid', 'Rainbow'] },
+    answerIndex: 0,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#1E293B" />
+        <circle cx="172" cy="40" r="14" fill="#FDE68A" />
+        <rect y="132" width="220" height="48" fill="#14532D" />
+        <polygon points="48,136 110,54 172,136" fill="#D97706" />
+        <polygon points="90,136 110,88 130,136" fill="#451A03" />
+      </svg>
+    ),
+  },
+  {
+    options: { ar: ['روبوت آلي', 'تلفاز قديم', 'إشارة مرور', 'غسالة'], en: ['Friendly Robot', 'Retro TV', 'Traffic Light', 'Arcade Box'] },
+    answerIndex: 0,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#ECFEFF" />
+        <line x1="110" y1="24" x2="110" y2="48" stroke="#475569" strokeWidth="4" />
+        <circle cx="110" cy="22" r="7" fill="#EF4444" />
+        <rect x="68" y="48" width="84" height="62" rx="14" fill="#64748B" />
+        <circle cx="92" cy="76" r="9" fill="#FACC15" />
+        <circle cx="128" cy="76" r="9" fill="#FACC15" />
+        <rect x="88" y="94" width="44" height="7" rx="3" fill="#E2E8F0" />
+        <rect x="76" y="114" width="68" height="46" rx="10" fill="#475569" />
+      </svg>
+    ),
+  },
+  {
+    options: { ar: ['فنجان قهوة', 'دلو طلاء', 'زهرة دوار الشمس', 'كعكة عيد ميلاد'], en: ['Coffee Mug', 'Paint Bucket', 'Sunflower', 'Birthday Cake'] },
+    answerIndex: 3,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#FFF1F2" />
+        <rect x="56" y="96" width="108" height="46" rx="8" fill="#F472B6" />
+        <rect x="70" y="66" width="80" height="32" rx="8" fill="#FBCFE8" />
+        <rect x="106" y="38" width="8" height="28" fill="#60A5FA" />
+        <ellipse cx="110" cy="30" rx="6" ry="10" fill="#F59E0B" />
+        <rect x="44" y="142" width="132" height="10" rx="5" fill="#94A3B8" />
+      </svg>
+    ),
+  },
+  {
+    options: { ar: ['بوصلة ملاحية', 'غواصة بحرية', 'طائرة هليكوبتر', 'مركبة قمرية'], en: ['Submarine', 'Compass', 'Helicopter', 'Lunar Rover'] },
+    answerIndex: 0,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#0369A1" />
+        <rect x="96" y="42" width="16" height="30" fill="#FACC15" />
+        <rect x="86" y="42" width="26" height="8" fill="#FDE047" />
+        <ellipse cx="110" cy="96" rx="68" ry="30" fill="#F59E0B" />
+        <circle cx="84" cy="96" r="10" fill="#E0F2FE" />
+        <circle cx="112" cy="96" r="10" fill="#E0F2FE" />
+        <circle cx="140" cy="96" r="10" fill="#E0F2FE" />
+        <rect x="30" y="88" width="14" height="16" fill="#B45309" />
+      </svg>
+    ),
+  },
+  {
+    options: { ar: ['بطيخة طازجة', 'كرة سلة', 'قمر مكتمل', 'قرص بيتزا'], en: ['Fresh Watermelon', 'Basketball', 'Full Moon', 'Pizza Slice'] },
+    answerIndex: 0,
+    svg: (
+      <svg viewBox="0 0 220 180" className="w-full h-full">
+        <rect width="220" height="180" fill="#ECFDF5" />
+        <path d="M40 72 A70 70 0 0 0 180 72 Z" fill="#16A34A" />
+        <path d="M50 72 A60 60 0 0 0 170 72 Z" fill="#EF4444" />
+        <circle cx="92" cy="94" r="3.5" fill="#1C1917" />
+        <circle cx="112" cy="108" r="3.5" fill="#1C1917" />
+        <circle cx="132" cy="92" r="3.5" fill="#1C1917" />
+        <circle cx="106" cy="84" r="3.5" fill="#1C1917" />
+      </svg>
+    ),
+  },
 ];
 
-export const GameImagePuzzle: React.FC<GameProps> = ({ lang, onFinish }) => {
+export const GameImagePuzzle: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
   const [round, setRound] = useState(0);
   const [revealed, setRevealed] = useState<number[]>([4]);
   const [score, setScore] = useState(0);
@@ -1082,10 +1489,14 @@ export const GameImagePuzzle: React.FC<GameProps> = ({ lang, onFinish }) => {
 
   const handleGuess = (optIdx: number) => {
     const correct = optIdx === item.answerIndex;
-    const pts = correct ? Math.max(25, 70 - revealed.length * 6) : 0;
+    const pts = correct ? Math.max(20, 60 - revealed.length * 5) : 0;
     const nextScore = score + pts;
-    if (correct) soundEngine.playPoint();
-    else soundEngine.playError();
+    if (correct) {
+      soundEngine.playPoint();
+      onScoreProgress?.(nextScore);
+    } else {
+      soundEngine.playError();
+    }
 
     if (round + 1 < VISUAL_MYSTERIES.length) {
       setScore(nextScore);
@@ -1093,9 +1504,9 @@ export const GameImagePuzzle: React.FC<GameProps> = ({ lang, onFinish }) => {
       setRevealed([4]);
     } else {
       onFinish({
-        outcome: nextScore >= 60 ? 'win' : 'draw',
+        outcome: nextScore >= 220 ? 'win' : 'draw',
         score: nextScore,
-        summaryText: `${nextScore} pts`,
+        summaryText: `${nextScore} pts (${VISUAL_MYSTERIES.length} stages)`,
       });
     }
   };
@@ -1105,7 +1516,7 @@ export const GameImagePuzzle: React.FC<GameProps> = ({ lang, onFinish }) => {
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
         <span className="flex items-center gap-1">
           <Eye className="w-3.5 h-3.5 text-[#C84B31]" />
-          {lang === 'ar' ? 'اكشف أقل عدد من المربعات' : 'Reveal fewer tiles for more points'}
+          {round + 1}/{VISUAL_MYSTERIES.length} · {lang === 'ar' ? 'اكشف أقل مربعات' : 'Reveal fewer tiles'}
         </span>
         <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
       </div>

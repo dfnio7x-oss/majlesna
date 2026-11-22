@@ -51,13 +51,13 @@ export const GameQADuel: React.FC<GameProps> = ({
     onScoreProgress?.(nextScores.p1);
 
     window.setTimeout(() => {
-      if (round >= 6) {
+      if (round >= 12) {
         const outcome =
           mode === 'local'
             ? nextScores.p1 === nextScores.p2
               ? 'draw'
               : 'win'
-            : nextScores.p1 >= 75
+            : nextScores.p1 >= 150
             ? 'win'
             : 'loss';
         onFinish({
@@ -83,7 +83,7 @@ export const GameQADuel: React.FC<GameProps> = ({
     <div className="max-w-xl mx-auto space-y-6 py-2">
       <div className="flex items-center justify-between text-xs sm:text-sm font-semibold">
         <span className="font-mono-tabular text-[#57534E] dark:text-[#B8AFA3]">
-          {lang === 'ar' ? `الجولة ${round} / 6` : `Round ${round} / 6`}
+          {lang === 'ar' ? `الجولة ${round} / 12` : `Round ${round} / 12`}
         </span>
         {mode === 'local' ? (
           <span className="text-[#C84B31]">

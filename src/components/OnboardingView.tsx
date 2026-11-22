@@ -20,6 +20,7 @@ import { AVATAR_COUNT, AvatarSvg, MajlisnaLogo } from './icons/GameIcons';
 import { GamePatternBackground } from './GamePatternBackground';
 import { soundEngine } from '../utils/soundEngine';
 import { processAlbumImageFile } from '../utils/avatarImage';
+import { parseFirebaseAuthError } from '../firebase';
 
 interface OnboardingViewProps {
   lang: Language;
@@ -135,8 +136,12 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
     setCheckState({ status: 'checking' });
     const timer = window.setTimeout(async () => {
       try {
+        const modeParam = isGoogleMandatoryUsernameStep ? 'claim' : 'register';
+        const playerQuery = isGoogleMandatoryUsernameStep
+          ? `&playerId=${encodeURIComponent(playerId)}`
+          : '';
         const res = await fetch(
-          `/api/username/check?username=${encodeURIComponent(clean)}&playerId=${encodeURIComponent(playerId)}`
+          `/api/username/check?username=${encodeURIComponent(clean)}&mode=${modeParam}${playerQuery}`
         );
         if (!res.ok) {
           if (!cancelled) setCheckState({ status: 'invalid', reason: 'rate_limited' });
@@ -158,7 +163,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [username, playerId, needsUsernameAvailability]);
+  }, [username, playerId, needsUsernameAvailability, isGoogleMandatoryUsernameStep]);
 
   const getReasonMessage = (reason: string): string => {
     switch (reason) {
@@ -170,6 +175,8 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
         return copy.onboarding.invalidChars;
       case 'reserved':
         return copy.onboarding.reserved;
+      case 'retired':
+        return copy.onboarding.retired;
       case 'invalid_password':
         return copy.onboarding.passwordTooShort;
       case 'invalid_credentials':
@@ -204,12 +211,9 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
     setSubmitError(null);
     try {
       await onLinkGoogle();
-    } catch {
-      setSubmitError(
-        lang === 'ar'
-          ? 'تعذر إكمال تسجيل Google. يمكنك المحاولة مجدداً أو المتابعة باسم المستخدم.'
-          : 'Google sign-in was cancelled. You can retry or continue with a username.'
-      );
+    } catch (err) {
+      soundEngine.playError();
+      setSubmitError(parseFirebaseAuthError(err, lang).message);
     } finally {
       setGoogleBusy(false);
     }
@@ -236,7 +240,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
     soundEngine.playClick();
     try {
       const res = await fetch(
-        `/api/username/check?username=${encodeURIComponent(clean)}&playerId=${encodeURIComponent(playerId)}`
+        `/api/username/check?username=${encodeURIComponent(clean)}&mode=entry`
       );
       if (!res.ok) {
         setSubmitError(copy.onboarding.taken);

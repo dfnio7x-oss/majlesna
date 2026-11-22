@@ -115,7 +115,13 @@ export const GameSketchRelay: React.FC<GameProps> = ({
           {isDrawer && <strong className="text-[#C84B31] text-sm">{promptWord}</strong>}
         </span>
         <span className="font-mono-tabular text-[#57534E] dark:text-[#B8AFA3]">
-          {lang === 'ar' ? `لوحة ${sketchRound}/3` : `Sketch ${sketchRound}/3`}
+          {mode === 'online'
+            ? lang === 'ar'
+              ? 'جولة جماعية'
+              : 'Live Relay'
+            : lang === 'ar'
+            ? `لوحة ${sketchRound}/6`
+            : `Sketch ${sketchRound}/6`}
         </span>
       </div>
 
@@ -187,8 +193,8 @@ export const GameSketchRelay: React.FC<GameProps> = ({
             type="button"
             onClick={() => {
               soundEngine.playPoint();
-              if (mode === 'online' || sketchRound >= 3) {
-                onFinish({ outcome: 'win', score: 95, summaryText: promptWord });
+              if (mode === 'online' || sketchRound >= 6) {
+                onFinish({ outcome: 'win', score: mode === 'online' ? 95 : 150, summaryText: promptWord });
               } else {
                 setSketchRound((r) => r + 1);
                 setPromptIdx((i) => i + 1);
@@ -197,7 +203,7 @@ export const GameSketchRelay: React.FC<GameProps> = ({
             }}
             className="h-9 px-4 rounded-xl bg-[#2D6A4F] text-white text-xs font-semibold cursor-pointer"
           >
-            {sketchRound >= 3 || mode === 'online'
+            {sketchRound >= 6 || mode === 'online'
               ? lang === 'ar'
                 ? 'إنهاء التتابع'
                 : 'Finish Relay'
@@ -253,7 +259,7 @@ export const GameGuessSong: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
       soundEngine.playError();
     }
     if (idx + 1 >= SONG_CLUE_BANK.length) {
-      onFinish({ outcome: nextScore >= 60 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
+      onFinish({ outcome: nextScore >= 120 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
     } else {
       setIdx((v) => v + 1);
       setShowHint(false);
@@ -316,7 +322,7 @@ export const GameMovieEmoji: React.FC<GameProps> = ({ lang, onFinish, onScorePro
       soundEngine.playError();
     }
     if (idx + 1 >= MOVIE_EMOJI_BANK.length) {
-      onFinish({ outcome: nextScore >= 75 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
+      onFinish({ outcome: nextScore >= 140 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
     } else {
       setIdx((v) => v + 1);
     }
@@ -369,7 +375,7 @@ export const GameEmojiChallenge: React.FC<GameProps> = ({ lang, onFinish, onScor
       soundEngine.playError();
     }
     if (idx + 1 >= EMOJI_RIDDLE_BANK.length) {
-      onFinish({ outcome: nextScore >= 75 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
+      onFinish({ outcome: nextScore >= 140 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
     } else {
       setIdx((v) => v + 1);
     }
@@ -405,9 +411,17 @@ export const GameEmojiChallenge: React.FC<GameProps> = ({ lang, onFinish, onScor
 /* ============================================================================
  * 35. RANDOM STORY COMPOSER (Story Dice)
  * ============================================================================ */
-export const GameRandomStory: React.FC<GameProps> = ({ lang, onFinish }) => {
+export const GameRandomStory: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const [act, setAct] = useState(0);
   const [rolls, setRolls] = useState({ h: 0, s: 1, t: 2 });
-  const [story, setStory] = useState('');
+  const [draft, setDraft] = useState('');
+  const [actsDone, setActsDone] = useState<string[]>([]);
+
+  const actLabels = [
+    { ar: 'الفصل الأول: البداية', en: 'Act 1: Opening Scene' },
+    { ar: 'الفصل الثاني: العقدة', en: 'Act 2: Rising Twist' },
+    { ar: 'الفصل الثالث: الخاتمة', en: 'Act 3: Grand Finale' },
+  ];
 
   const rollDice = () => {
     soundEngine.playClick();
@@ -418,11 +432,32 @@ export const GameRandomStory: React.FC<GameProps> = ({ lang, onFinish }) => {
     });
   };
 
+  const commitAct = () => {
+    const clean = draft.trim();
+    if (clean.length < 8) return;
+    soundEngine.playPoint();
+    const updated = [...actsDone, clean];
+    setActsDone(updated);
+    setDraft('');
+    onScoreProgress?.(updated.length * 45);
+    if (updated.length >= 3) {
+      const totalChars = updated.join(' ').length;
+      onFinish({
+        outcome: 'win',
+        score: Math.min(160, 75 + Math.round(totalChars / 3)),
+        summaryText: lang === 'ar' ? 'أكملت رواية من 3 فصول!' : 'Completed a 3-act storybook!',
+      });
+    } else {
+      setAct(updated.length);
+      rollDice();
+    }
+  };
+
   return (
     <div className="max-w-xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-          {lang === 'ar' ? 'ادمج العناصر الثلاثة في قصة قصيرة' : 'Weave all 3 rolled elements into a quick story'}
+          {actLabels[act][lang]} ({act + 1}/3)
         </span>
         <button
           type="button"
@@ -433,6 +468,16 @@ export const GameRandomStory: React.FC<GameProps> = ({ lang, onFinish }) => {
           <span>{lang === 'ar' ? 'ارمِ النرد' : 'Roll Dice'}</span>
         </button>
       </div>
+
+      {actsDone.length > 0 && (
+        <div className="p-3.5 rounded-2xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] space-y-1.5 text-xs text-[#57534E] dark:text-[#B8AFA3]">
+          {actsDone.map((line, i) => (
+            <p key={i}>
+              <strong className="text-[#C84B31] me-1">{i + 1}.</strong> {line}
+            </p>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
@@ -448,27 +493,26 @@ export const GameRandomStory: React.FC<GameProps> = ({ lang, onFinish }) => {
       </div>
 
       <textarea
-        rows={4}
-        value={story}
-        onChange={(e) => setStory(e.target.value)}
-        placeholder={lang === 'ar' ? 'اكتب قصتك الطريفة هنا...' : 'Write your creative mini-story here...'}
+        rows={3}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder={lang === 'ar' ? 'اكتب فقرة هذا الفصل هنا...' : 'Write this act using the rolled dice...'}
         className="w-full p-4 rounded-2xl bg-white dark:bg-[#141210] border border-[#E5DEC9] dark:border-[#342E28] text-sm text-[#1C1917] dark:text-[#F5F2EB] focus:outline-none focus:border-[#C84B31]"
       />
 
       <button
         type="button"
-        disabled={story.trim().length < 10}
-        onClick={() => {
-          soundEngine.playPoint();
-          onFinish({
-            outcome: 'win',
-            score: Math.min(110, 50 + Math.round(story.trim().length / 2)),
-            summaryText: lang === 'ar' ? 'قصة إبداعية رائعة!' : 'Great imaginative story!',
-          });
-        }}
+        disabled={draft.trim().length < 8}
+        onClick={commitAct}
         className="w-full h-11 rounded-xl bg-[#2D6A4F] disabled:opacity-40 text-white text-sm font-semibold tactile-btn cursor-pointer"
       >
-        {lang === 'ar' ? 'مشاركة القصة وإتمام الجولة' : 'Publish Story & Finish'}
+        {act < 2
+          ? lang === 'ar'
+            ? 'اعتماد الفصل والانتقال للتالي'
+            : 'Save Act & Roll Next'
+          : lang === 'ar'
+          ? 'نشر القصة الكاملة'
+          : 'Publish Complete Story'}
       </button>
     </div>
   );
@@ -478,20 +522,23 @@ export const GameRandomStory: React.FC<GameProps> = ({ lang, onFinish }) => {
  * 36. ACTING CHALLENGE (Charades Card + Timer)
  * ============================================================================ */
 export const GameActingChallenge: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const [idx, setIdx] = useState(0);
+  const TOTAL_ROUNDS = 8;
+  const [round, setRound] = useState(1);
+  const [cardIdx, setCardIdx] = useState(() => Math.floor(Math.random() * ACTING_PROMPTS.length));
   const [hidden, setHidden] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
   const [score, setScore] = useState(0);
-  const prompt = ACTING_PROMPTS[idx % ACTING_PROMPTS.length];
+  const prompt = ACTING_PROMPTS[cardIdx % ACTING_PROMPTS.length];
 
   useEffect(() => {
     const t = window.setInterval(() => setTimeLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
     return () => window.clearInterval(t);
-  }, [idx]);
+  }, [round, cardIdx]);
 
   return (
     <div className="max-w-md mx-auto space-y-5 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
+        <span>{round}/{TOTAL_ROUNDS}</span>
         <span className="font-mono-tabular text-[#C84B31] flex items-center gap-1">
           <Timer className="w-3.5 h-3.5" /> {timeLeft}s
         </span>
@@ -519,30 +566,31 @@ export const GameActingChallenge: React.FC<GameProps> = ({ lang, onFinish, onSco
           type="button"
           onClick={() => {
             soundEngine.playClick();
-            setIdx((i) => i + 1);
+            setCardIdx((i) => i + 1);
             setTimeLeft(30);
           }}
           className="h-12 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] text-xs font-semibold text-[#1C1917] dark:text-[#F5F2EB] cursor-pointer"
         >
-          {lang === 'ar' ? 'بطاقة أخرى' : 'Next Card'}
+          {lang === 'ar' ? 'تغيير البطاقة' : 'Swap Card'}
         </button>
         <button
           type="button"
           onClick={() => {
             soundEngine.playPoint();
-            const nextScore = score + 35;
+            const nextScore = score + 25;
             setScore(nextScore);
             onScoreProgress?.(nextScore);
-            if (idx >= 2) {
+            if (round >= TOTAL_ROUNDS) {
               onFinish({ outcome: 'win', score: nextScore, summaryText: `${nextScore} pts` });
             } else {
-              setIdx((i) => i + 1);
+              setRound((r) => r + 1);
+              setCardIdx((i) => i + 1);
               setTimeLeft(30);
             }
           }}
           className="h-12 rounded-xl bg-[#2D6A4F] text-white text-xs font-semibold cursor-pointer"
         >
-          {lang === 'ar' ? 'خمّنوها بنجاح! (+35)' : 'They Guessed It! (+35)'}
+          {lang === 'ar' ? 'خمّنوها بنجاح! (+25)' : 'They Guessed It! (+25)'}
         </button>
       </div>
     </div>
@@ -588,6 +636,90 @@ const SHADOW_CARDS = [
       </g>
     ),
   },
+  {
+    options: { ar: ['قلم حبر', 'صاروخ فضائي', 'شمعة', 'ناطحة سحاب'], en: ['Fountain Pen', 'Space Rocket', 'Candle', 'Skyscraper'] },
+    answerIndex: 1,
+    shape: (
+      <g fill="currentColor">
+        <path d="M100 22 C122 44 124 88 120 116 L80 116 C76 88 78 44 100 22 Z" />
+        <polygon points="80,92 54,124 82,116" />
+        <polygon points="120,92 146,124 118,116" />
+        <polygon points="90,120 100,146 110,120" />
+      </g>
+    ),
+  },
+  {
+    options: { ar: ['شجرة نخيل', 'مظلة مطر', 'خيمة سيرك', 'منطاد هوائي'], en: ['Palm Tree', 'Umbrella', 'Circus Tent', 'Air Balloon'] },
+    answerIndex: 1,
+    shape: (
+      <g fill="currentColor">
+        <path d="M36 88 C36 42 164 42 164 88 Q132 76 100 88 Q68 76 36 88 Z" />
+        <path d="M100 40 L100 128 Q100 142 84 140" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+      </g>
+    ),
+  },
+  {
+    options: { ar: ['منارة بحرية', 'برج ساعة', 'شجرة سرو', 'مئذنة أثرية'], en: ['Lighthouse', 'Clock Tower', 'Cypress Tree', 'Windmill'] },
+    answerIndex: 0,
+    shape: (
+      <g fill="currentColor">
+        <polygon points="82,142 90,54 110,54 118,142" />
+        <rect x="86" y="38" width="28" height="18" rx="3" />
+        <polygon points="82,38 100,20 118,38" />
+        <polygon points="116,42 172,26 172,58" opacity="0.55" />
+        <polygon points="84,42 28,26 28,58" opacity="0.55" />
+      </g>
+    ),
+  },
+  {
+    options: { ar: ['فراشة', 'بومة ليلية', 'بطريق', 'قطة منزلية'], en: ['Butterfly', 'Owl', 'Penguin', 'House Cat'] },
+    answerIndex: 1,
+    shape: (
+      <g fill="currentColor">
+        <ellipse cx="100" cy="96" rx="34" ry="42" />
+        <circle cx="80" cy="54" r="16" />
+        <circle cx="120" cy="54" r="16" />
+        <polygon points="68,42 74,30 84,42" />
+        <polygon points="132,42 126,30 116,42" />
+        <polygon points="94,72 106,72 100,84" />
+      </g>
+    ),
+  },
+  {
+    options: { ar: ['قطار بخاري', 'جرار زراعي', 'غواصة', 'حافلة مدرسية'], en: ['Steam Train', 'Tractor', 'Submarine', 'School Bus'] },
+    answerIndex: 0,
+    shape: (
+      <g fill="currentColor">
+        <rect x="44" y="68" width="76" height="44" rx="6" />
+        <rect x="114" y="44" width="38" height="68" rx="4" />
+        <rect x="56" y="42" width="16" height="28" rx="3" />
+        <circle cx="66" cy="122" r="14" />
+        <circle cx="102" cy="122" r="14" />
+        <circle cx="136" cy="122" r="14" />
+      </g>
+    ),
+  },
+  {
+    options: { ar: ['شوكة طعام', 'تاج ملكي', 'سياج حديقة', 'موجة بحر'], en: ['Dinner Fork', 'Royal Crown', 'Garden Fence', 'Ocean Wave'] },
+    answerIndex: 1,
+    shape: (
+      <g fill="currentColor">
+        <polygon points="36,120 44,54 74,88 100,40 126,88 156,54 164,120" />
+        <rect x="34" y="124" width="132" height="16" rx="5" />
+      </g>
+    ),
+  },
+  {
+    options: { ar: ['طائرة ورقية', 'مركب شراعي', 'هرم زجاجي', 'خيمة صحراوية'], en: ['Paper Kite', 'Sailboat', 'Glass Pyramid', 'Desert Tent'] },
+    answerIndex: 1,
+    shape: (
+      <g fill="currentColor">
+        <polygon points="100,26 100,104 48,104" />
+        <polygon points="106,40 106,104 148,104" />
+        <polygon points="36,112 164,112 142,138 58,138" />
+      </g>
+    ),
+  },
 ];
 
 export const GameShadowGuess: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
@@ -597,7 +729,7 @@ export const GameShadowGuess: React.FC<GameProps> = ({ lang, onFinish, onScorePr
 
   const handlePick = (i: number) => {
     const correct = i === card.answerIndex;
-    const nextScore = correct ? score + 35 : score;
+    const nextScore = correct ? score + 22 : score;
     if (correct) {
       soundEngine.playPoint();
       setScore(nextScore);
@@ -606,7 +738,7 @@ export const GameShadowGuess: React.FC<GameProps> = ({ lang, onFinish, onScorePr
       soundEngine.playError();
     }
     if (idx + 1 >= SHADOW_CARDS.length) {
-      onFinish({ outcome: nextScore >= 70 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
+      onFinish({ outcome: nextScore >= 140 ? 'win' : 'draw', score: nextScore, summaryText: `${nextScore} pts` });
     } else {
       setIdx((v) => v + 1);
     }
@@ -644,12 +776,15 @@ export const GameShadowGuess: React.FC<GameProps> = ({ lang, onFinish, onScorePr
 /* ============================================================================
  * 38. SOUND IMITATION (Prompt Deck + Optional Mic Clip + Peer Rating)
  * ============================================================================ */
-export const GameSoundImitation: React.FC<GameProps> = ({ lang, onFinish }) => {
-  const [idx, setIdx] = useState(0);
+export const GameSoundImitation: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const TOTAL_ROUNDS = 5;
+  const [round, setRound] = useState(1);
+  const [idx, setIdx] = useState(() => Math.floor(Math.random() * SOUND_PROMPTS.length));
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [micNote, setMicNote] = useState<string | null>(null);
   const [rating, setRating] = useState<number>(4);
+  const [totalScore, setTotalScore] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const prompt = SOUND_PROMPTS[idx % SOUND_PROMPTS.length];
 
@@ -684,6 +819,11 @@ export const GameSoundImitation: React.FC<GameProps> = ({ lang, onFinish }) => {
 
   return (
     <div className="max-w-md mx-auto space-y-5 text-center">
+      <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
+        <span>{round}/{TOTAL_ROUNDS}</span>
+        <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{totalScore} pts</span>
+      </div>
+
       <div className="p-6 rounded-3xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] space-y-2">
         <span className="text-[11px] font-bold uppercase text-[#C84B31]">{prompt.category[lang]}</span>
         <h2 className="font-display text-2xl font-bold text-[#1C1917] dark:text-[#F5F2EB]">
@@ -721,7 +861,7 @@ export const GameSoundImitation: React.FC<GameProps> = ({ lang, onFinish }) => {
           }}
           className="h-11 px-4 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] text-xs font-semibold text-[#1C1917] dark:text-[#F5F2EB] cursor-pointer"
         >
-          {lang === 'ar' ? 'صوت آخر' : 'New Prompt'}
+          {lang === 'ar' ? 'تغيير الصوت' : 'Swap Prompt'}
         </button>
       </div>
 
@@ -755,36 +895,121 @@ export const GameSoundImitation: React.FC<GameProps> = ({ lang, onFinish }) => {
         type="button"
         onClick={() => {
           soundEngine.playPoint();
-          onFinish({
-            outcome: rating >= 3 ? 'win' : 'draw',
-            score: rating * 22,
-            summaryText: `${rating}/5 ★ — ${prompt[lang]}`,
-          });
+          const nextTotal = totalScore + rating * 8;
+          setTotalScore(nextTotal);
+          onScoreProgress?.(nextTotal);
+          if (round >= TOTAL_ROUNDS) {
+            onFinish({
+              outcome: nextTotal >= 100 ? 'win' : 'draw',
+              score: nextTotal,
+              summaryText: `${nextTotal} pts (${TOTAL_ROUNDS}/5 ★)`,
+            });
+          } else {
+            setRound((r) => r + 1);
+            setIdx((i) => i + 1);
+            setAudioUrl(null);
+            setMicNote(null);
+          }
         }}
         className="w-full h-11 rounded-xl bg-[#2D6A4F] text-white text-sm font-semibold cursor-pointer"
       >
-        {lang === 'ar' ? 'اعتماد التقييم' : 'Confirm Performance'}
+        {round >= TOTAL_ROUNDS
+          ? lang === 'ar'
+            ? 'اعتماد التقييم النهائي'
+            : 'Finish Showcase'
+          : lang === 'ar'
+          ? 'اعتماد الجولة والانتقال للتالية'
+          : 'Confirm & Next Sound'}
       </button>
     </div>
   );
 };
 
 /* ============================================================================
- * 39. JIGSAW ASSEMBLY (3x3 SVG Artwork Tile-Swap Puzzle)
+ * 39. JIGSAW ASSEMBLY (4-Stage SVG Artwork Tile-Swap Campaign: 3x3 -> 4x4)
  * ============================================================================ */
-function makeScrambledTiles(): number[] {
-  const arr = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+function makeScrambledTiles(gridDim: number): number[] {
+  const arr = Array.from({ length: gridDim * gridDim }, (_, i) => i);
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return arr.every((v, i) => v === i) ? [1, 0, 2, 3, 4, 5, 6, 7, 8] : arr;
+  if (arr.every((v, i) => v === i)) {
+    [arr[0], arr[1]] = [arr[1], arr[0]];
+  }
+  return arr;
 }
 
-export const GameJigsawAssembly: React.FC<GameProps> = ({ lang, onFinish }) => {
-  const [tiles, setTiles] = useState<number[]>(() => makeScrambledTiles());
+const JIGSAW_STAGES = [
+  {
+    title: { ar: 'شروق الجبال', en: 'Alpine Sunrise' },
+    dim: 3,
+    art: (
+      <>
+        <rect x="0" y="0" width="180" height="180" fill="#DBEAFE" />
+        <circle cx="135" cy="40" r="22" fill="#F59E0B" />
+        <polygon points="0,145 55,62 112,145" fill="#2D6A4F" />
+        <polygon points="72,145 130,52 180,145" fill="#C84B31" />
+        <rect x="0" y="142" width="180" height="38" fill="#1E3A8A" />
+      </>
+    ),
+  },
+  {
+    title: { ar: 'الواحة الصحراوية', en: 'Desert Oasis Dusk' },
+    dim: 3,
+    art: (
+      <>
+        <rect x="0" y="0" width="180" height="180" fill="#FDE68A" />
+        <circle cx="48" cy="44" r="20" fill="#EA580C" />
+        <path d="M0 112 Q90 88 180 112 L180 180 L0 180 Z" fill="#D97706" />
+        <ellipse cx="115" cy="148" rx="44" ry="14" fill="#0EA5E9" />
+        <rect x="74" y="88" width="7" height="58" fill="#78350F" />
+        <ellipse cx="77" cy="86" rx="22" ry="10" fill="#15803D" />
+      </>
+    ),
+  },
+  {
+    title: { ar: 'الكوكب ذو الحلقات', en: 'Cosmic Ringed Planet' },
+    dim: 4,
+    art: (
+      <>
+        <rect x="0" y="0" width="180" height="180" fill="#0F172A" />
+        <circle cx="30" cy="34" r="3" fill="#FDE047" />
+        <circle cx="144" cy="28" r="2.5" fill="#FFFFFF" />
+        <circle cx="152" cy="144" r="3" fill="#93C5FD" />
+        <circle cx="34" cy="142" r="2.5" fill="#FFFFFF" />
+        <circle cx="90" cy="90" r="36" fill="#C84B31" />
+        <ellipse cx="90" cy="90" rx="68" ry="16" fill="none" stroke="#FBBF24" strokeWidth="7" transform="rotate(-18 90 90)" />
+        <circle cx="76" cy="78" r="8" fill="#FDBA74" />
+      </>
+    ),
+  },
+  {
+    title: { ar: 'منارة الميناء', en: 'Coastal Harbor Beacon' },
+    dim: 4,
+    art: (
+      <>
+        <rect x="0" y="0" width="180" height="180" fill="#BAE6FD" />
+        <polygon points="102,42 180,14 180,70" fill="#FEF08A" opacity="0.85" />
+        <rect x="72" y="54" width="28" height="82" fill="#FFFFFF" stroke="#1E293B" strokeWidth="3" />
+        <rect x="72" y="74" width="28" height="20" fill="#C84B31" />
+        <polygon points="68,54 86,32 104,54" fill="#1E293B" />
+        <rect x="0" y="132" width="180" height="48" fill="#0369A1" />
+        <polygon points="122,130 162,130 152,144 132,144" fill="#92400E" />
+      </>
+    ),
+  },
+];
+
+export const GameJigsawAssembly: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const [stageIdx, setStageIdx] = useState(0);
+  const stage = JIGSAW_STAGES[stageIdx];
+  const [tiles, setTiles] = useState<number[]>(() => makeScrambledTiles(stage.dim));
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [swaps, setSwaps] = useState(0);
+  const [totalScore, setTotalScore] = useState(0);
+
+  const cellSize = 180 / stage.dim;
 
   const handleSlotTap = (slotIdx: number) => {
     if (selectedSlot === null) {
@@ -806,27 +1031,45 @@ export const GameJigsawAssembly: React.FC<GameProps> = ({ lang, onFinish }) => {
 
     if (next.every((v, i) => v === i)) {
       soundEngine.playPoint();
-      onFinish({
-        outcome: 'win',
-        score: Math.max(45, 130 - nextSwaps * 4),
-        summaryText: lang === 'ar' ? `ركّبت اللوحة خلال ${nextSwaps} تبديل!` : `Assembled artwork in ${nextSwaps} swaps!`,
-      });
+      const stagePts = Math.max(30, 80 - nextSwaps * 2);
+      const nextScore = totalScore + stagePts;
+      setTotalScore(nextScore);
+      onScoreProgress?.(nextScore);
+      if (stageIdx + 1 >= JIGSAW_STAGES.length) {
+        onFinish({
+          outcome: 'win',
+          score: nextScore,
+          summaryText: lang === 'ar' ? `أتممت ٤ لوحات (${nextScore} نقطة)!` : `Solved all 4 artworks (${nextScore} pts)!`,
+        });
+      } else {
+        window.setTimeout(() => {
+          const nextStage = JIGSAW_STAGES[stageIdx + 1];
+          setStageIdx((s) => s + 1);
+          setTiles(makeScrambledTiles(nextStage.dim));
+          setSelectedSlot(null);
+          setSwaps(0);
+        }, 450);
+      }
     }
   };
 
   return (
     <div className="max-w-sm mx-auto space-y-4 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{lang === 'ar' ? 'اضغط على قطعتين لتبديل موقعهما' : 'Tap any 2 tiles to swap them'}</span>
-        <span className="font-mono-tabular text-[#C84B31]">{swaps}</span>
+        <span>{stage.title[lang]} ({stageIdx + 1}/{JIGSAW_STAGES.length})</span>
+        <span className="font-mono-tabular text-[#C84B31]">{swaps} swaps • {totalScore} pts</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 p-2 rounded-2xl bg-[#E5DEC9] dark:bg-[#342E28]" dir="ltr">
+      <div
+        className="grid gap-1 p-2 rounded-2xl bg-[#E5DEC9] dark:bg-[#342E28]"
+        style={{ gridTemplateColumns: `repeat(${stage.dim}, minmax(0, 1fr))` }}
+        dir="ltr"
+      >
         {tiles.map((pieceId, slotIdx) => {
-          const row = Math.floor(pieceId / 3);
-          const col = pieceId % 3;
-          const vx = col * 60;
-          const vy = row * 60;
+          const row = Math.floor(pieceId / stage.dim);
+          const col = pieceId % stage.dim;
+          const vx = col * cellSize;
+          const vy = row * cellSize;
           const active = selectedSlot === slotIdx;
           const rightSpot = pieceId === slotIdx;
           return (
@@ -842,12 +1085,8 @@ export const GameJigsawAssembly: React.FC<GameProps> = ({ lang, onFinish }) => {
                   : 'border-transparent'
               }`}
             >
-              <svg viewBox={`${vx} ${vy} 60 60`} className="w-full h-full block">
-                <rect x="0" y="0" width="180" height="180" fill="#DBEAFE" />
-                <circle cx="135" cy="40" r="22" fill="#F59E0B" />
-                <polygon points="0,145 55,62 112,145" fill="#2D6A4F" />
-                <polygon points="72,145 130,52 180,145" fill="#C84B31" />
-                <rect x="0" y="142" width="180" height="38" fill="#1E3A8A" />
+              <svg viewBox={`${vx} ${vy} ${cellSize} ${cellSize}`} className="w-full h-full block">
+                {stage.art}
               </svg>
             </button>
           );
@@ -858,13 +1097,19 @@ export const GameJigsawAssembly: React.FC<GameProps> = ({ lang, onFinish }) => {
 };
 
 /* ============================================================================
- * 40. WORD CHAIN (Timed Last-Letter Relay)
+ * 40. WORD CHAIN (12-Word Timed Last-Letter Relay)
  * ============================================================================ */
+const CHAIN_STARTERS = {
+  ar: ['شمس', 'قمر', 'نور', 'بحر', 'كتاب', 'سفر'],
+  en: ['planet', 'bridge', 'castle', 'lantern', 'market', 'stream'],
+};
+
 export const GameWordChain: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const starter = lang === 'ar' ? 'شمس' : 'planet';
-  const [chain, setChain] = useState<string[]>([starter]);
+  const [starter] = useState(() => CHAIN_STARTERS[lang][Math.floor(Math.random() * CHAIN_STARTERS[lang].length)]);
+  const [chain, setChain] = useState<string[]>(() => [starter]);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const TARGET_WORDS = 12;
 
   const lastWord = chain[chain.length - 1];
   const lastChars = Array.from(lastWord);
@@ -896,13 +1141,13 @@ export const GameWordChain: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
     setChain(nextChain);
     setInput('');
     setError(null);
-    const score = (nextChain.length - 1) * 20;
+    const score = (nextChain.length - 1) * 15;
     onScoreProgress?.(score);
 
-    if (nextChain.length >= 6) {
+    if (nextChain.length >= TARGET_WORDS + 1) {
       onFinish({
         outcome: 'win',
-        score: score + 20,
+        score: score + 25,
         summaryText: nextChain.join(' → '),
       });
     }
@@ -911,7 +1156,7 @@ export const GameWordChain: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
   return (
     <div className="max-w-lg mx-auto space-y-5">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{lang === 'ar' ? `السلسلة: ${chain.length - 1}/5` : `Chain: ${chain.length - 1}/5`}</span>
+        <span>{lang === 'ar' ? `السلسلة: ${chain.length - 1}/${TARGET_WORDS}` : `Chain: ${chain.length - 1}/${TARGET_WORDS}`}</span>
         <span>
           {lang === 'ar' ? 'ابدأ بحرف:' : 'Next starts with:'}{' '}
           <strong className="text-base text-[#C84B31]">{reqChar.toUpperCase()}</strong>

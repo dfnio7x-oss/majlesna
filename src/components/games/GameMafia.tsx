@@ -31,6 +31,22 @@ const ROLE_LABELS: Record<MafiaRole, { ar: string; en: string; descAr: string; d
   },
 };
 
+const BOT_ROSTER_AR = ['سارة', 'عمر', 'ليلى', 'طارق', 'منى', 'خالد', 'ريم', 'يوسف'];
+const BOT_ROSTER_EN = ['Sara', 'Omar', 'Layla', 'Tariq', 'Mona', 'Khalid', 'Reem', 'Yousef'];
+
+function buildLocalVillage(count: 5 | 7 | 9, playerName: string, lang: 'ar' | 'en'): MafiaPlayerState[] {
+  const bots = lang === 'ar' ? BOT_ROSTER_AR : BOT_ROSTER_EN;
+  const ids = ['me', ...Array.from({ length: count - 1 }, (_, i) => `b${i + 1}`)];
+  const roles = assignMafiaRoles(ids);
+  return ids.map((id, i) => ({
+    id,
+    name: i === 0 ? playerName : bots[i - 1],
+    role: roles[id],
+    alive: true,
+    isBot: id !== 'me',
+  }));
+}
+
 export const GameMafia: React.FC<GameProps> = ({
   lang,
   mode,
@@ -41,25 +57,25 @@ export const GameMafia: React.FC<GameProps> = ({
   onFinish,
   onRoomAction,
 }) => {
-  // Solo/Local 5-player party simulation state
-  const [localPlayers, setLocalPlayers] = useState<MafiaPlayerState[]>(() => {
-    const names = lang === 'ar'
-      ? [playerName, 'سارة', 'عمر', 'ليلى', 'طارق']
-      : [playerName, 'Sara', 'Omar', 'Layla', 'Tariq'];
-    const ids = ['me', 'b1', 'b2', 'b3', 'b4'];
-    const roles = assignMafiaRoles(ids);
-    return ids.map((id, i) => ({
-      id,
-      name: names[i],
-      role: roles[id],
-      alive: true,
-      isBot: id !== 'me',
-    }));
-  });
+  // Solo/Local party simulation state (5, 7, or 9 players)
+  const [villageSize, setVillageSize] = useState<5 | 7 | 9>(7);
+  const [localPlayers, setLocalPlayers] = useState<MafiaPlayerState[]>(() =>
+    buildLocalVillage(7, playerName, lang)
+  );
   const [localPhase, setLocalPhase] = useState<'night' | 'day'>('night');
   const [dayCount, setDayCount] = useState(1);
   const [log, setLog] = useState<string[]>([]);
   const [roleVisible, setRoleVisible] = useState(false);
+
+  const changeVillageSize = (size: 5 | 7 | 9) => {
+    soundEngine.playClick();
+    setVillageSize(size);
+    setLocalPlayers(buildLocalVillage(size, playerName, lang));
+    setLocalPhase('night');
+    setDayCount(1);
+    setLog([]);
+    setRoleVisible(false);
+  };
 
   const onlineState = mode === 'online' && room
     ? (room.gameState as {
@@ -229,7 +245,7 @@ export const GameMafia: React.FC<GameProps> = ({
       </div>
 
       {/* Phase Header */}
-      <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28]">
         <div className="flex items-center gap-2 font-display font-bold text-sm text-[#1C1917] dark:text-[#F5F2EB]">
           {currentPhase === 'night' ? (
             <>
@@ -243,6 +259,24 @@ export const GameMafia: React.FC<GameProps> = ({
             </>
           )}
         </div>
+        {mode !== 'online' && (
+          <div className="flex items-center gap-1.5">
+            {([5, 7, 9] as const).map((sz) => (
+              <button
+                key={sz}
+                type="button"
+                onClick={() => changeVillageSize(sz)}
+                className={`h-7 px-2.5 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                  villageSize === sz
+                    ? 'bg-[#991B1B] text-white border-[#991B1B]'
+                    : 'bg-white dark:bg-[#1E1B18] border-[#E5DEC9] dark:border-[#342E28] text-[#57534E] dark:text-[#B8AFA3]'
+                }`}
+              >
+                {sz} {lang === 'ar' ? 'لاعبين' : 'P'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Player Table */}

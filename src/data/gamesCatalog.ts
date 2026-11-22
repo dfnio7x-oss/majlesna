@@ -92,8 +92,8 @@ export const GAMES_CATALOG: GameMeta[] = [
     category: 'trivia',
     title: { ar: 'من سيربح المليون', en: 'Who Wants to Be a Millionaire' },
     description: {
-      ar: 'تسلق سلم ١٥ سؤالاً متدرج الصعوبة مع ٣ وسائل مساعدة كلاسيكية.',
-      en: 'Climb a 15-tier prize ladder with 3 classic lifelines and escalating stakes.',
+      ar: 'تسلق سلم ٢٠ سؤالاً متدرج الصعوبة مع ٣ وسائل مساعدة كلاسيكية.',
+      en: 'Climb a 20-tier prize ladder with 3 classic lifelines and escalating stakes.',
     },
     rules: {
       ar: [
@@ -1599,8 +1599,8 @@ export const GAMES_CATALOG: GameMeta[] = [
     category: 'creative',
     title: { ar: 'تركيب الصور', en: 'Image Tile Assembly' },
     description: {
-      ar: 'رتّب القطع الهندسية التسع لإعادة بناء اللوحة الفنية الكاملة بأقل عدد تبديلات.',
-      en: 'Swap and assemble 9 illustrated mosaic tiles back into a seamless artwork.',
+      ar: 'رتّب القطع الهندسية عبر ٤ لوحات متدرجة (٣×٣ ثم ٤×٤) بأقل عدد تبديلات.',
+      en: 'Swap and assemble mosaic tiles across 4 progressive artworks (3×3 & 4×4).',
     },
     rules: {
       ar: [

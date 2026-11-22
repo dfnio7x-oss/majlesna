@@ -4,17 +4,26 @@ import type { GameProps } from './GameShell';
 import { checkXOWinner, getBestXOMove, type XOCell } from '../../utils/gameRules';
 import { soundEngine } from '../../utils/soundEngine';
 
+const MAX_STAGES = 5;
+const TARGET_WINS = 3;
+
 export const GameXO: React.FC<GameProps> = ({
   lang,
   mode,
   playerId,
   room,
   onFinish,
+  onScoreProgress,
   onRoomAction,
 }) => {
   const [localBoard, setLocalBoard] = useState<XOCell[]>(Array(9).fill(null));
   const [localTurn, setLocalTurn] = useState<'X' | 'O'>('X');
   const [locked, setLocked] = useState(false);
+
+  // Multi-stage championship state for Solo / Local
+  const [stage, setStage] = useState(1);
+  const [tally, setTally] = useState({ x: 0, o: 0, draws: 0 });
+  const [stageBanner, setStageBanner] = useState<string | null>(null);
 
   const onlineState = mode === 'online' && room
     ? (room.gameState as {
@@ -36,7 +45,7 @@ export const GameXO: React.FC<GameProps> = ({
 
   const isMyTurn = onlineState
     ? !onlineState.winner && onlineState.turnPlayerId === playerId
-    : !check.winner && (mode === 'local' || localTurn === 'X');
+    : !check.winner && !stageBanner && (mode === 'local' || localTurn === 'X');
 
   // Online completion detection
   useEffect(() => {
@@ -49,12 +58,90 @@ export const GameXO: React.FC<GameProps> = ({
     }
   }, [onlineState?.winner]);
 
-  // AI turn in solo mode
+  const handleStageComplete = (winner: 'X' | 'O' | 'draw') => {
+    const nextTally = {
+      x: tally.x + (winner === 'X' ? 1 : 0),
+      o: tally.o + (winner === 'O' ? 1 : 0),
+      draws: tally.draws + (winner === 'draw' ? 1 : 0),
+    };
+    setTally(nextTally);
+    const liveScore = nextTally.x * 35 + nextTally.draws * 12;
+    onScoreProgress?.(liveScore);
+
+    if (winner === 'X') soundEngine.playPoint();
+    else if (winner === 'O') soundEngine.playError();
+
+    const reachedTarget = nextTally.x >= TARGET_WINS || nextTally.o >= TARGET_WINS;
+    const reachedMax = stage >= MAX_STAGES;
+
+    const msg =
+      winner === 'draw'
+        ? lang === 'ar'
+          ? `انتهت المرحلة ${stage} بالتعادل!`
+          : `Stage ${stage} ended in a draw!`
+        : lang === 'ar'
+        ? `حسم ${winner} المرحلة ${stage}!`
+        : `${winner} took Stage ${stage}!`;
+    setStageBanner(msg);
+    setLocked(true);
+
+    window.setTimeout(() => {
+      if (reachedTarget || reachedMax) {
+        if (mode === 'local') {
+          const outcome = nextTally.x === nextTally.o ? 'draw' : 'win';
+          onFinish({
+            outcome,
+            score: Math.max(nextTally.x, nextTally.o) * 40 + nextTally.draws * 10,
+            summaryText:
+              nextTally.x === nextTally.o
+                ? lang === 'ar'
+                  ? `تعادل بعد ${stage} مراحل (${nextTally.x}-${nextTally.o})`
+                  : `Tied after ${stage} stages (${nextTally.x}-${nextTally.o})`
+                : lang === 'ar'
+                ? `بطل السلسلة: ${nextTally.x > nextTally.o ? 'X' : 'O'} (${nextTally.x}-${nextTally.o})`
+                : `Series Champion: ${nextTally.x > nextTally.o ? 'X' : 'O'} (${nextTally.x}-${nextTally.o})`,
+          });
+        } else {
+          const outcome =
+            nextTally.x > nextTally.o
+              ? 'win'
+              : nextTally.x < nextTally.o
+              ? 'loss'
+              : 'draw';
+          onFinish({
+            outcome,
+            score: Math.max(25, nextTally.x * 40 + nextTally.draws * 15),
+            summaryText:
+              lang === 'ar'
+                ? `النتيجة النهائية بعد ${stage} مراحل: X ${nextTally.x} - ${nextTally.o} O`
+                : `Final score after ${stage} stages: X ${nextTally.x} - ${nextTally.o} O`,
+          });
+        }
+      } else {
+        const nextStage = stage + 1;
+        setStage(nextStage);
+        setLocalBoard(Array(9).fill(null));
+        setLocalTurn(nextStage % 2 === 0 ? 'O' : 'X');
+        setStageBanner(null);
+        setLocked(false);
+      }
+    }, 850);
+  };
+
+  // AI turn in solo mode (escalates after Stage 2)
   useEffect(() => {
-    if (mode !== 'solo' || localTurn !== 'O' || check.winner) return;
+    if (mode !== 'solo' || localTurn !== 'O' || check.winner || stageBanner) return;
     setLocked(true);
     const timer = window.setTimeout(() => {
-      const move = getBestXOMove(localBoard, 'O');
+      const empties = localBoard
+        .map((v, i) => (v === null ? i : -1))
+        .filter((i) => i !== -1);
+      // Stages 1-2 occasionally let an opening slip; Stages 3-5 play full optimal AI
+      const playRandomOpen = stage === 1 && empties.length >= 6 && Math.random() < 0.35;
+      const move = playRandomOpen
+        ? empties[Math.floor(Math.random() * empties.length)]
+        : getBestXOMove(localBoard, 'O');
+
       if (move >= 0) {
         const next = [...localBoard];
         next[move] = 'O';
@@ -62,19 +149,17 @@ export const GameXO: React.FC<GameProps> = ({
         setLocalBoard(next);
         const res = checkXOWinner(next);
         if (res.winner) {
-          const outcome = res.winner === 'X' ? 'win' : res.winner === 'O' ? 'loss' : 'draw';
-          onFinish({
-            outcome,
-            score: outcome === 'win' ? 100 : outcome === 'draw' ? 40 : 20,
-          });
+          handleStageComplete(res.winner);
         } else {
           setLocalTurn('X');
+          setLocked(false);
         }
+      } else {
+        setLocked(false);
       }
-      setLocked(false);
-    }, 420);
+    }, 400);
     return () => window.clearTimeout(timer);
-  }, [mode, localTurn, localBoard, check.winner]);
+  }, [mode, localTurn, localBoard, check.winner, stageBanner, stage]);
 
   const handleCellClick = (idx: number) => {
     if (board[idx] !== null || locked) return;
@@ -94,33 +179,27 @@ export const GameXO: React.FC<GameProps> = ({
 
     const res = checkXOWinner(next);
     if (res.winner) {
-      if (mode === 'local') {
-        onFinish({
-          outcome: res.winner === 'draw' ? 'draw' : 'win',
-          score: res.winner === 'draw' ? 40 : 90,
-          summaryText:
-            res.winner === 'draw'
-              ? lang === 'ar'
-                ? 'تعادل رائع بين اللاعبين!'
-                : 'Evenly matched draw!'
-              : lang === 'ar'
-              ? `فاز اللاعب ${res.winner}!`
-              : `Player ${res.winner} wins!`,
-        });
-      } else {
-        const outcome = res.winner === 'X' ? 'win' : res.winner === 'O' ? 'loss' : 'draw';
-        onFinish({
-          outcome,
-          score: outcome === 'win' ? 100 : outcome === 'draw' ? 40 : 20,
-        });
-      }
+      handleStageComplete(res.winner);
     } else {
       setLocalTurn(localTurn === 'X' ? 'O' : 'X');
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 py-2">
+    <div className="flex flex-col items-center justify-center space-y-5 py-2">
+      {mode !== 'online' && (
+        <div className="w-full max-w-md flex items-center justify-between px-4 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] text-xs font-semibold">
+          <span className="text-[#57534E] dark:text-[#B8AFA3]">
+            {lang === 'ar'
+              ? `المرحلة ${stage} / ${MAX_STAGES} (الأفضل من ٥)`
+              : `Stage ${stage} / ${MAX_STAGES} (Best of 5)`}
+          </span>
+          <span className="font-mono-tabular text-[#1C1917] dark:text-[#F5F2EB]">
+            X {tally.x} · D {tally.draws} · O {tally.o}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center gap-6 text-sm font-semibold">
         <span
           className={`px-4 py-1.5 rounded-xl border ${
@@ -143,13 +222,17 @@ export const GameXO: React.FC<GameProps> = ({
             ? room?.players.find((p) => p.id === onlineState?.oPlayerId)?.name ?? 'P2'
             : mode === 'solo'
             ? lang === 'ar'
-              ? 'الكمبيوتر'
-              : 'AI Bot'
+              ? `الكمبيوتر (${lang === 'ar' && stage >= 3 ? 'ذكي' : 'متوسط'})`
+              : `AI Bot (${stage >= 3 ? 'Pro' : 'Casual'})`
             : lang === 'ar'
             ? 'اللاعب الثاني'
             : 'Player O'}
         </span>
       </div>
+
+      {stageBanner && (
+        <p className="font-display text-sm font-bold text-[#C84B31]">{stageBanner}</p>
+      )}
 
       <div className="grid grid-cols-3 gap-3 bg-[#F1ECE2] p-4 rounded-3xl border border-[#E5DEC9] dark:border-[#342E28]">
         {board.map((cell, idx) => {

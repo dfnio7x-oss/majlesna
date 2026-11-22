@@ -8,6 +8,7 @@ import { getMostPlayedGames } from '../utils/gameRules';
 import { AVATAR_COUNT, AvatarSvg, GameIcon } from './icons/GameIcons';
 import { soundEngine } from '../utils/soundEngine';
 import { processAlbumImageFile } from '../utils/avatarImage';
+import { parseFirebaseAuthError } from '../firebase';
 
 interface ProfileViewProps {
   lang: Language;
@@ -53,6 +54,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const [pinInput, setPinInput] = useState('');
   const [pinSaved, setPinSaved] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const totalMatches = profile.wins + profile.losses + profile.draws;
   const winRate = totalMatches > 0 ? Math.round((profile.wins / totalMatches) * 100) : 0;
@@ -124,6 +127,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           ? copy.profile.cooldownLockedMsg
           : res.reason === 'invalid_pin'
           ? copy.profile.pinRequiredNote
+          : res.reason === 'retired'
+          ? copy.onboarding.retired
           : res.reason === 'taken'
           ? copy.onboarding.taken
           : copy.onboarding.invalidChars;
@@ -374,10 +379,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 {!firebaseUser && (
                   <button
                     type="button"
-                    onClick={() => void onLinkGoogle().catch(() => {})}
-                    className="h-8 px-3 rounded-lg bg-[#2B4C7E] text-white text-xs font-semibold cursor-pointer"
+                    disabled={googleBusy}
+                    onClick={async () => {
+                      soundEngine.playClick();
+                      setGoogleError(null);
+                      setGoogleBusy(true);
+                      try {
+                        await onLinkGoogle();
+                      } catch (err) {
+                        soundEngine.playError();
+                        setGoogleError(parseFirebaseAuthError(err, lang).message);
+                      } finally {
+                        setGoogleBusy(false);
+                      }
+                    }}
+                    className="h-8 px-3 rounded-lg bg-[#2B4C7E] text-white text-xs font-semibold disabled:opacity-55 cursor-pointer"
                   >
-                    Google
+                    {googleBusy ? '...' : 'Google'}
                   </button>
                 )}
                 <button
@@ -390,6 +408,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </button>
               </div>
             </div>
+
+            {googleError && (
+              <p className="text-xs font-semibold text-[#C84B31] dark:text-[#F87171]">{googleError}</p>
+            )}
 
             <form onSubmit={handlePinSave} className="pt-4 border-t border-[#F1ECE2] dark:border-[#2E2822] space-y-2">
               <label className="block text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">

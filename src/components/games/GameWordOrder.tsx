@@ -16,7 +16,7 @@ export const GameWordOrder: React.FC<GameProps> = ({
       const j = Math.floor(Math.random() * (i + 1));
       [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-    return copy.slice(0, 5);
+    return copy.slice(0, 12);
   }, [lang]);
 
   const [round, setRound] = useState(0);
@@ -49,7 +49,9 @@ export const GameWordOrder: React.FC<GameProps> = ({
               outcome: 'win',
               score: nextScore,
               summaryText:
-                lang === 'ar' ? 'رتّبت جميع الكلمات بنجاح!' : 'All 5 words unscrambled!',
+                lang === 'ar'
+                  ? `رتّبت جميع الكلمات الـ ${items.length} بنجاح!`
+                  : `All ${items.length} words unscrambled!`,
             });
           } else {
             const nextR = round + 1;

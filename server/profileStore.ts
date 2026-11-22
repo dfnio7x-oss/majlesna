@@ -23,6 +23,11 @@ interface UsernameIndexEntry {
   updatedAt: string;
 }
 
+interface RetiredUsernameEntry {
+  ownerId: string;
+  retiredAt: string;
+}
+
 interface StoredRecord {
   profile: PlayerProfile;
   encryptedEmail?: string;
@@ -34,9 +39,54 @@ interface StoredRecord {
 interface StoreFileShape {
   records: Record<string, StoredRecord>;
   usernameIndex: Record<string, UsernameIndexEntry>;
+  retiredUsernameIndex: Record<string, RetiredUsernameEntry>;
 }
 
+export type UsernameCheckMode = 'entry' | 'register' | 'claim' | 'rename';
+
 let cache: StoreFileShape | null = null;
+
+function rebuildUsernameIndexes(store: StoreFileShape): boolean {
+  let changed = false;
+
+  for (const [recordId, rec] of Object.entries(store.records)) {
+    const p = rec?.profile;
+    if (!p) continue;
+
+    let currentBlindIndex: string | null = null;
+    const rawUsername = p.usernameLower || p.username;
+    if (p.onboardingCompleted && typeof rawUsername === 'string' && rawUsername.trim().length >= 3) {
+      const normalized = normalizeUsername(rawUsername);
+      currentBlindIndex = computeUsernameBlindIndex(normalized);
+      if (p.usernameLower !== normalized) {
+        p.usernameLower = normalized;
+        changed = true;
+      }
+      if (!store.usernameIndex[currentBlindIndex]) {
+        store.usernameIndex[currentBlindIndex] = {
+          ownerId: recordId,
+          updatedAt: p.usernameUpdatedAt || p.createdAt || new Date().toISOString(),
+        };
+        changed = true;
+      }
+    }
+
+    if (Array.isArray(rec.cooldownAudit)) {
+      for (const audit of rec.cooldownAudit) {
+        if (!audit?.blindIndex) continue;
+        if (audit.blindIndex !== currentBlindIndex && !store.retiredUsernameIndex[audit.blindIndex]) {
+          store.retiredUsernameIndex[audit.blindIndex] = {
+            ownerId: recordId,
+            retiredAt: audit.at || new Date().toISOString(),
+          };
+          changed = true;
+        }
+      }
+    }
+  }
+
+  return changed;
+}
 
 function ensureStore(): StoreFileShape {
   if (cache) return cache;
@@ -51,7 +101,11 @@ function ensureStore(): StoreFileShape {
         cache = {
           records: (raw.records as Record<string, StoredRecord>) ?? {},
           usernameIndex: (raw.usernameIndex as Record<string, UsernameIndexEntry>) ?? {},
+          retiredUsernameIndex: (raw.retiredUsernameIndex as Record<string, RetiredUsernameEntry>) ?? {},
         };
+        if (rebuildUsernameIndexes(cache)) {
+          persistStore();
+        }
         return cache;
       }
       // Migrate legacy Phase 1 flat profile map seamlessly
@@ -68,14 +122,20 @@ function ensureStore(): StoreFileShape {
           };
         }
       }
-      cache = { records: migratedRecords, usernameIndex: {} };
+      cache = { records: migratedRecords, usernameIndex: {}, retiredUsernameIndex: {} };
+      rebuildUsernameIndexes(cache);
+      persistStore();
       return cache;
     }
   } catch {
     // fallback to clean store
   }
-  cache = { records: {}, usernameIndex: {} };
+  cache = { records: {}, usernameIndex: {}, retiredUsernameIndex: {} };
   return cache;
+}
+
+export function resetProfileStoreCacheForTests(): void {
+  cache = null;
 }
 
 function persistStore(): void {
@@ -133,6 +193,20 @@ export function saveStoredProfile(incoming: PlayerProfile): PlayerProfile {
         hasPin: false,
       };
 
+  // Ensure any valid onboarded username synced from cloud is registered in usernameIndex
+  const rawU = safeProfile.usernameLower || safeProfile.username;
+  if (safeProfile.onboardingCompleted && typeof rawU === 'string' && rawU.trim().length >= 3) {
+    const normalized = normalizeUsername(rawU);
+    safeProfile.usernameLower = normalized;
+    const blindIndex = computeUsernameBlindIndex(normalized);
+    if (!store.usernameIndex[blindIndex] && !store.retiredUsernameIndex[blindIndex]) {
+      store.usernameIndex[blindIndex] = {
+        ownerId: incoming.id,
+        updatedAt: safeProfile.usernameUpdatedAt || new Date().toISOString(),
+      };
+    }
+  }
+
   store.records[incoming.id] = {
     ...(existingRec ?? {}),
     profile: safeProfile,
@@ -143,11 +217,12 @@ export function saveStoredProfile(incoming: PlayerProfile): PlayerProfile {
 
 export function checkUsernameAvailability(
   rawUsername: string,
-  requesterId?: string
+  requesterId?: string,
+  mode: UsernameCheckMode = 'register'
 ): {
   available: boolean;
   normalized: string;
-  reason?: 'too_short' | 'too_long' | 'invalid_chars' | 'reserved' | 'taken';
+  reason?: 'too_short' | 'too_long' | 'invalid_chars' | 'reserved' | 'taken' | 'retired';
 } {
   const validation = validateUsernameFormat(rawUsername);
   if (!validation.valid) {
@@ -159,13 +234,32 @@ export function checkUsernameAvailability(
   }
   const store = ensureStore();
   const blindIndex = computeUsernameBlindIndex(validation.normalized);
-  const hit = store.usernameIndex[blindIndex];
-  if (hit && hit.ownerId !== requesterId) {
+
+  // Permanently block any retired/previously used username regardless of who tries to claim it
+  if (store.retiredUsernameIndex[blindIndex]) {
     return {
       available: false,
       normalized: validation.normalized,
-      reason: 'taken',
+      reason: 'retired',
     };
+  }
+
+  const hit = store.usernameIndex[blindIndex];
+  if (hit) {
+    // Allow requester only when claiming an un-onboarded account with a pre-reserved index
+    const isUnfinishedClaimOwner =
+      mode === 'claim' &&
+      Boolean(requesterId) &&
+      hit.ownerId === requesterId &&
+      !store.records[requesterId!]?.profile.onboardingCompleted;
+
+    if (!isUnfinishedClaimOwner) {
+      return {
+        available: false,
+        normalized: validation.normalized,
+        reason: 'taken',
+      };
+    }
   }
   return {
     available: true,
@@ -190,11 +284,11 @@ export async function claimInitialUsername(params: {
   profile?: PlayerProfile;
 }> {
   const trimmedDisplay = params.rawUsername.trim().normalize('NFKC');
-  const availability = checkUsernameAvailability(trimmedDisplay, params.playerId);
+  const availability = checkUsernameAvailability(trimmedDisplay, params.playerId, 'claim');
   if (!availability.available) {
     return {
       ok: false,
-      status: availability.reason === 'taken' ? 409 : 400,
+      status: availability.reason === 'taken' || availability.reason === 'retired' ? 409 : 400,
       error: availability.reason ?? 'invalid_username',
       reason: availability.reason,
     };
@@ -216,6 +310,10 @@ export async function claimInitialUsername(params: {
   const nowIso = new Date(now).toISOString();
   const nextIso = new Date(now + USERNAME_COOLDOWN_MS).toISOString();
   const blindIndex = computeUsernameBlindIndex(availability.normalized);
+
+  if (store.retiredUsernameIndex[blindIndex]) {
+    return { ok: false, status: 409, error: 'retired', reason: 'retired' };
+  }
 
   // Double-check uniqueness atomically
   const ownerEntry = store.usernameIndex[blindIndex];
@@ -327,25 +425,31 @@ export async function changeRegisteredUsername(params: {
   }
 
   const trimmedDisplay = params.rawUsername.trim().normalize('NFKC');
-  const availability = checkUsernameAvailability(trimmedDisplay, params.playerId);
+  const availability = checkUsernameAvailability(trimmedDisplay, params.playerId, 'rename');
   if (!availability.available) {
     return {
       ok: false,
-      status: availability.reason === 'taken' ? 409 : 400,
+      status: availability.reason === 'taken' || availability.reason === 'retired' ? 409 : 400,
       error: availability.reason ?? 'invalid_username',
       reason: availability.reason,
     };
   }
 
-  // Remove previous HMAC blind index cleanly
-  if (rec.profile.usernameLower) {
-    const oldIndex = computeUsernameBlindIndex(rec.profile.usernameLower);
+  const nowIso = new Date(now).toISOString();
+
+  // Permanently retire previous username blind index so nobody (including same user) can reuse it later
+  if (rec.profile.usernameLower || rec.profile.username) {
+    const oldNorm = normalizeUsername(rec.profile.usernameLower || rec.profile.username || '');
+    const oldIndex = computeUsernameBlindIndex(oldNorm);
     if (store.usernameIndex[oldIndex]?.ownerId === params.playerId) {
       delete store.usernameIndex[oldIndex];
     }
+    store.retiredUsernameIndex[oldIndex] = {
+      ownerId: params.playerId,
+      retiredAt: nowIso,
+    };
   }
 
-  const nowIso = new Date(now).toISOString();
   const nextIso = new Date(now + USERNAME_COOLDOWN_MS).toISOString();
   const newIndex = computeUsernameBlindIndex(availability.normalized);
 
@@ -399,11 +503,11 @@ export async function registerWithUsernamePassword(params: {
   sessionToken?: string;
 }> {
   const trimmedDisplay = params.rawUsername.trim().normalize('NFKC');
-  const availability = checkUsernameAvailability(trimmedDisplay);
+  const availability = checkUsernameAvailability(trimmedDisplay, undefined, 'register');
   if (!availability.available) {
     return {
       ok: false,
-      status: availability.reason === 'taken' ? 409 : 400,
+      status: availability.reason === 'taken' || availability.reason === 'retired' ? 409 : 400,
       error: availability.reason ?? 'invalid_username',
       reason: availability.reason,
     };
@@ -421,6 +525,9 @@ export async function registerWithUsernamePassword(params: {
 
   const store = ensureStore();
   const blindIndex = computeUsernameBlindIndex(availability.normalized);
+  if (store.retiredUsernameIndex[blindIndex]) {
+    return { ok: false, status: 409, error: 'retired', reason: 'retired' };
+  }
   if (store.usernameIndex[blindIndex]) {
     return { ok: false, status: 409, error: 'taken', reason: 'taken' };
   }

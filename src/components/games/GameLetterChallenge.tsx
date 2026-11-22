@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { GameProps } from './GameShell';
 import { LETTER_CHALLENGE_POOL } from '../../data/questionBank';
 import { soundEngine } from '../../utils/soundEngine';
@@ -10,6 +10,8 @@ const CATEGORIES = [
   { key: 'object', ar: 'جماد', en: 'Object' },
   { key: 'country', ar: 'بلاد', en: 'Country / City' },
 ];
+
+const LOCAL_LETTER_STAGES = 5;
 
 export const GameLetterChallenge: React.FC<GameProps> = ({
   lang,
@@ -25,17 +27,24 @@ export const GameLetterChallenge: React.FC<GameProps> = ({
         : (room.gameState.enLetter as string)
       : null;
 
-  const [letter] = useState(() => {
-    if (onlineLetter) return onlineLetter;
-    const pool = LETTER_CHALLENGE_POOL[lang];
-    return pool[Math.floor(Math.random() * pool.length)];
-  });
+  const letterSequence = useMemo(() => {
+    const copy = [...LETTER_CHALLENGE_POOL[lang]];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy.slice(0, LOCAL_LETTER_STAGES);
+  }, [lang]);
 
+  const [stageIdx, setStageIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(50);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [totalScore, setTotalScore] = useState(0);
+  const [totalValid, setTotalValid] = useState(0);
 
-  const activeLetter = onlineLetter || letter;
+  const activeLetter = onlineLetter || letterSequence[stageIdx];
+  const isOnline = mode === 'online';
 
   useEffect(() => {
     if (submitted) return;
@@ -45,13 +54,12 @@ export const GameLetterChallenge: React.FC<GameProps> = ({
     }
     const timer = window.setTimeout(() => setTimeLeft((t) => t - 1), 1000);
     return () => window.clearTimeout(timer);
-  }, [timeLeft, submitted]);
+  }, [timeLeft, submitted, stageIdx]);
 
   const handleSubmit = () => {
     if (submitted) return;
-    setSubmitted(true);
     const cleanTargetChar = activeLetter.replace('ـ', '').charAt(0).toLowerCase();
-    let total = 0;
+    let roundTotal = 0;
     let validCount = 0;
 
     CATEGORIES.forEach((cat) => {
@@ -61,21 +69,38 @@ export const GameLetterChallenge: React.FC<GameProps> = ({
         const matches =
           first === cleanTargetChar ||
           (cleanTargetChar === 'أ' && ['ا', 'إ', 'آ'].includes(first));
-        total += matches ? 20 : 8;
+        roundTotal += matches ? 20 : 8;
         if (matches) validCount++;
       }
     });
 
+    const nextScore = totalScore + roundTotal;
+    const nextValid = totalValid + validCount;
+    setTotalScore(nextScore);
+    setTotalValid(nextValid);
     soundEngine.playPoint();
-    onScoreProgress?.(total);
-    onFinish({
-      outcome: validCount >= 3 ? 'win' : 'draw',
-      score: total,
-      summaryText:
-        lang === 'ar'
-          ? `حرف "${activeLetter}" · ${validCount} فئات مطابقة للحرف`
-          : `Letter "${activeLetter}" · ${validCount}/5 matching entries`,
-    });
+    onScoreProgress?.(nextScore);
+
+    if (isOnline || stageIdx + 1 >= LOCAL_LETTER_STAGES) {
+      setSubmitted(true);
+      onFinish({
+        outcome: isOnline
+          ? validCount >= 3 ? 'win' : 'draw'
+          : nextValid >= 12 ? 'win' : 'draw',
+        score: nextScore,
+        summaryText: isOnline
+          ? lang === 'ar'
+            ? `حرف "${activeLetter}" · ${validCount} فئات مطابقة للحرف`
+            : `Letter "${activeLetter}" · ${validCount}/5 matching entries`
+          : lang === 'ar'
+          ? `أنهيت ماراثون ٥ حروف · ${nextValid} إجابات مطابقة`
+          : `5-letter marathon · ${nextValid}/25 matching entries`,
+      });
+    } else {
+      setStageIdx((s) => s + 1);
+      setAnswers({});
+      setTimeLeft(50);
+    }
   };
 
   return (
@@ -87,6 +112,13 @@ export const GameLetterChallenge: React.FC<GameProps> = ({
           </div>
           <div>
             <p className="text-xs text-[#57534E] dark:text-[#B8AFA3]">
+              {!isOnline && (
+                <span className="font-bold text-[#C84B31] me-1.5">
+                  {lang === 'ar'
+                    ? `الحرف ${stageIdx + 1}/${LOCAL_LETTER_STAGES} ·`
+                    : `Letter ${stageIdx + 1}/${LOCAL_LETTER_STAGES} ·`}
+                </span>
+              )}
               {lang === 'ar' ? 'اكتب كلمات تبدأ بهذا الحرف' : 'Fill words starting with this letter'}
             </p>
             <p className="text-sm font-bold text-[#1C1917] dark:text-[#F5F2EB]">
@@ -94,7 +126,12 @@ export const GameLetterChallenge: React.FC<GameProps> = ({
             </p>
           </div>
         </div>
-        <span className="font-mono-tabular text-lg font-bold text-[#C84B31]">{timeLeft}s</span>
+        <div className="text-end">
+          <span className="font-mono-tabular text-lg font-bold text-[#C84B31] block">{timeLeft}s</span>
+          {!isOnline && (
+            <span className="font-mono-tabular text-[11px] font-bold text-[#2D6A4F]">{totalScore} pts</span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -120,7 +157,9 @@ export const GameLetterChallenge: React.FC<GameProps> = ({
         onClick={handleSubmit}
         className="w-full h-11 rounded-xl bg-[#B45309] hover:bg-[#92400E] text-white text-sm font-semibold tactile-btn cursor-pointer"
       >
-        {lang === 'ar' ? 'تثبيت الإجابات' : 'Submit Answers'}
+        {!isOnline && stageIdx + 1 < LOCAL_LETTER_STAGES
+          ? lang === 'ar' ? 'اعتماد والانتقال للحرف التالي' : 'Submit & Next Letter'
+          : lang === 'ar' ? 'تثبيت الإجابات' : 'Submit Answers'}
       </button>
     </div>
   );

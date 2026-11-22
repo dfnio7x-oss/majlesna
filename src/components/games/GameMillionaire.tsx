@@ -9,17 +9,25 @@ export const GameMillionaire: React.FC<GameProps> = ({
   onFinish,
   onScoreProgress,
 }) => {
+  const totalTiers = MILLIONAIRE_TIERS.length;
   const questions = useMemo(() => {
-    const easy = QUIZ_QUESTIONS.filter((q) => q.difficulty === 1);
-    const med = QUIZ_QUESTIONS.filter((q) => q.difficulty === 2);
-    const hard = QUIZ_QUESTIONS.filter((q) => q.difficulty === 3);
+    const shuffle = <T,>(arr: T[]) => {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+    const easy = shuffle(QUIZ_QUESTIONS.filter((q) => q.difficulty === 1));
+    const med = shuffle(QUIZ_QUESTIONS.filter((q) => q.difficulty === 2));
+    const hard = shuffle(QUIZ_QUESTIONS.filter((q) => q.difficulty === 3));
     const combined = [...easy, ...med, ...hard];
-    // Pad cleanly up to 15 unique cycling tiers
-    while (combined.length < 15) {
+    while (combined.length < totalTiers) {
       combined.push(QUIZ_QUESTIONS[combined.length % QUIZ_QUESTIONS.length]);
     }
-    return combined.slice(0, 15);
-  }, []);
+    return combined.slice(0, totalTiers);
+  }, [totalTiers]);
 
   const [step, setStep] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -43,14 +51,17 @@ export const GameMillionaire: React.FC<GameProps> = ({
     window.setTimeout(() => {
       if (isCorrect) {
         soundEngine.playPoint();
-        const points = Math.round((step + 1) * 15);
+        const points = Math.round((step + 1) * 16);
         onScoreProgress?.(points);
 
-        if (step >= 14) {
+        if (step >= totalTiers - 1) {
           onFinish({
             outcome: 'win',
-            score: 250,
-            summaryText: lang === 'ar' ? 'مبارك! وصلت إلى المليون!' : 'You won the 1,000,000 grand prize!',
+            score: 360,
+            summaryText:
+              lang === 'ar'
+                ? 'أسطوري! اجتزت جميع المراحل العشرين وحصدت 10,000,000!'
+                : 'Legendary! Cleared all 20 tiers for the 10,000,000 grand prize!',
           });
         } else {
           setStep((s) => s + 1);
@@ -61,17 +72,17 @@ export const GameMillionaire: React.FC<GameProps> = ({
         }
       } else {
         soundEngine.playLose();
-        const safeNet = step >= 10 ? 32000 : step >= 5 ? 1000 : 0;
+        const safeNet = step >= 15 ? 1000000 : step >= 10 ? 32000 : step >= 5 ? 1000 : 0;
         onFinish({
           outcome: step >= 5 ? 'draw' : 'loss',
-          score: Math.max(15, step * 12),
+          score: Math.max(15, step * 14),
           summaryText:
             lang === 'ar'
-              ? `انتهى المشوار عند المرحلة ${step + 1} · الرصيد المضمون: ${safeNet.toLocaleString()}`
-              : `Stopped at tier ${step + 1} · Safe prize: ${safeNet.toLocaleString()}`,
+              ? `انتهى المشوار عند المرحلة ${step + 1} / ${totalTiers} · الرصيد المضمون: ${safeNet.toLocaleString()}`
+              : `Stopped at tier ${step + 1} / ${totalTiers} · Safe prize: ${safeNet.toLocaleString()}`,
         });
       }
-    }, 650);
+    }, 600);
   };
 
   const handle5050 = () => {
@@ -215,16 +226,16 @@ export const GameMillionaire: React.FC<GameProps> = ({
         </div>
       </div>
 
-      {/* 15-Step Prize Ladder */}
-      <aside className="lg:col-span-4 bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-2xl p-4">
-        <div className="space-y-1">
+      {/* 20-Step Prize Ladder */}
+      <aside className="lg:col-span-4 bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] rounded-2xl p-3 max-h-[420px] overflow-y-auto">
+        <div className="space-y-0.5">
           {[...MILLIONAIRE_TIERS]
             .map((val, idx) => ({ val, idx }))
             .reverse()
             .map(({ val, idx }) => {
               const isCurrent = idx === step;
               const isPassed = idx < step;
-              const isMilestone = idx === 4 || idx === 9 || idx === 14;
+              const isMilestone = idx === 4 || idx === 9 || idx === 14 || idx === 19;
               return (
                 <div
                   key={idx}

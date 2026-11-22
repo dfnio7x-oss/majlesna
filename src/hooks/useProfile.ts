@@ -175,6 +175,28 @@ export function useProfile(preferences?: UserPreferences) {
         }
       }
 
+      // Ensure /usernames/{usernameLower} reservation exists in Firestore
+      const uLower = createPayload.usernameLower;
+      if (uLower && !uLower.includes('/')) {
+        const unamePath = `usernames/${uLower}`;
+        const unameRef = doc(db, 'usernames', uLower);
+        try {
+          const unameSnap = await getDoc(unameRef);
+          if (!unameSnap.exists()) {
+            await setDoc(unameRef, {
+              uid: user.uid,
+              username: createPayload.username,
+              usernameLower: uLower,
+              active: true,
+              createdAt: serverTimestamp(),
+            });
+          }
+        } catch {
+          // Non-fatal if another user already reserved or offline; server remains authoritative
+          void unamePath;
+        }
+      }
+
       if (prefs) {
         const privPayload = buildPrivateAccountPayload(prefs, user.uid, user.email);
         if (!privPayload) return;
@@ -370,10 +392,20 @@ export function useProfile(preferences?: UserPreferences) {
 
       if (next.onboardingCompleted && next.username) {
         void syncFirestoreProfile(next, latestPrefsRef.current);
+        try {
+          const headers = await getBearerHeaders();
+          await fetch('/api/profile', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(next),
+          });
+        } catch {
+          // ignore
+        }
       }
     });
     return () => unsub();
-  }, [syncFirestoreProfile]);
+  }, [syncFirestoreProfile, getBearerHeaders]);
 
   // Hydrate from server on initial load (supports session token or local profile ID cleanly)
   useEffect(() => {
@@ -564,6 +596,9 @@ export function useProfile(preferences?: UserPreferences) {
 
   const changeUsername = useCallback(
     async (params: { username: string; pin?: string }) => {
+      const previousUsernameLower =
+        latestProfileRef.current.usernameLower ||
+        latestProfileRef.current.username?.trim().normalize('NFKC').toLowerCase();
       const headers = await getBearerHeaders();
       const res = await fetch('/api/username/change', {
         method: 'POST',
@@ -618,6 +653,43 @@ export function useProfile(preferences?: UserPreferences) {
             } catch (error) {
               if (isPermissionError(error)) {
                 handleFirestoreError(error, OperationType.UPDATE, userPath);
+              }
+            }
+
+            // Retire old /usernames doc and reserve new one in Firestore
+            if (
+              previousUsernameLower &&
+              previousUsernameLower !== usernameFields.usernameLower &&
+              !previousUsernameLower.includes('/')
+            ) {
+              try {
+                const oldRef = doc(db, 'usernames', previousUsernameLower);
+                const oldSnap = await getDoc(oldRef);
+                if (oldSnap.exists() && oldSnap.data()?.active === true) {
+                  await updateDoc(oldRef, {
+                    active: false,
+                    retiredAt: serverTimestamp(),
+                  });
+                }
+              } catch {
+                // non-fatal
+              }
+            }
+            if (usernameFields.usernameLower && !usernameFields.usernameLower.includes('/')) {
+              try {
+                const newRef = doc(db, 'usernames', usernameFields.usernameLower);
+                const newSnap = await getDoc(newRef);
+                if (!newSnap.exists()) {
+                  await setDoc(newRef, {
+                    uid,
+                    username: usernameFields.username,
+                    usernameLower: usernameFields.usernameLower,
+                    active: true,
+                    createdAt: serverTimestamp(),
+                  });
+                }
+              } catch {
+                // non-fatal
               }
             }
           });

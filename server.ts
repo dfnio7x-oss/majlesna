@@ -67,6 +67,14 @@ async function startServer() {
 
   app.use(express.json({ limit: '1mb' }));
 
+  // Allow Firebase OAuth popup window communication cleanly in modern browsers
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    }
+    next();
+  });
+
   // Basic security headers for API responses
   app.use('/api', (_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -195,7 +203,10 @@ async function startServer() {
     }
     const raw = String(req.query.username ?? '');
     const requesterId = typeof req.query.playerId === 'string' ? req.query.playerId : undefined;
-    const result = checkUsernameAvailability(raw, requesterId);
+    const rawMode = typeof req.query.mode === 'string' ? req.query.mode : 'register';
+    const mode =
+      rawMode === 'entry' || rawMode === 'claim' || rawMode === 'rename' ? rawMode : 'register';
+    const result = checkUsernameAvailability(raw, requesterId, mode);
     res.json(result);
   });
 
@@ -407,16 +418,22 @@ async function startServer() {
 
   app.post('/api/groups/:groupId/members', async (req, res) => {
     const callerId = await resolveCallerPlayerId(req);
-    const { playerId: bodyPlayerId, memberIds } = req.body as {
+    const { playerId: bodyPlayerId, memberIds, usernames } = req.body as {
       playerId?: string;
       memberIds?: string[];
+      usernames?: string[];
     };
     const playerId = callerId ?? bodyPlayerId;
-    if (!playerId || !Array.isArray(memberIds)) {
+    const hasIds = Array.isArray(memberIds) && memberIds.length > 0;
+    const hasUsernames = Array.isArray(usernames) && usernames.length > 0;
+    if (!playerId || (!hasIds && !hasUsernames)) {
       res.status(400).json({ ok: false, error: 'invalid_payload' });
       return;
     }
-    const outcome = addGroupMembers(playerId, req.params.groupId, memberIds);
+    const outcome = addGroupMembers(playerId, req.params.groupId, {
+      memberIds: Array.isArray(memberIds) ? memberIds : [],
+      usernames: Array.isArray(usernames) ? usernames : [],
+    });
     if (outcome.ok && outcome.group) {
       pushToPlayers(outcome.group.memberIds, {
         type: 'social_update',

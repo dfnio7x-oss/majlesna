@@ -218,6 +218,53 @@
         "playedAt",
         "createdAt"
       ]
+    },
+    "UsernameReservation": {
+      "title": "UsernameReservation",
+      "description": "Permanent unique reservation record for active and retired usernames so no previously used username can be reclaimed.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID that claimed this username.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "username": {
+          "type": "string",
+          "description": "Original display username (3-16 chars).",
+          "minLength": 3,
+          "maxLength": 16
+        },
+        "usernameLower": {
+          "type": "string",
+          "description": "Normalized lowercase username matching document ID.",
+          "minLength": 3,
+          "maxLength": 16
+        },
+        "active": {
+          "type": "boolean",
+          "description": "True while active, false once retired."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when username was claimed."
+        },
+        "retiredAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when username was permanently retired."
+        }
+      },
+      "required": [
+        "uid",
+        "username",
+        "usernameLower",
+        "active",
+        "createdAt"
+      ]
     }
   },
   "firestore": {
@@ -232,6 +279,10 @@
     "/users/{userId}/matches/{matchId}": {
       "schema": { "$ref": "#/entities/MatchHistoryItem" },
       "description": "Owner-only match history subcollection."
+    },
+    "/usernames/{usernameId}": {
+      "schema": { "$ref": "#/entities/UsernameReservation" },
+      "description": "Permanent active & retired username registry enforcing cloud uniqueness."
     }
   }
 }

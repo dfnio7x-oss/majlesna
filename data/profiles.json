@@ -551,6 +551,11 @@
     "313c652cfbc38ce01e98ed89e8b9384cc31f6a017243fdd4e9e23b7b30f8883b": {
       "ownerId": "u_3bf7100396f58666",
       "updatedAt": "2026-11-20T12:49:48.501Z"
+    },
+    "4eed7cfeae6c8643adf91e2ad9acd7683ff20e0e59b19d74b107e85b08805add": {
+      "ownerId": "NHqMwiiCo8WvZokYguH6PVIUDlR2",
+      "updatedAt": "2026-11-18T08:53:45.710Z"
     }
-  }
+  },
+  "retiredUsernameIndex": {}
 }

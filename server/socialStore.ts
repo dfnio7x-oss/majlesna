@@ -364,7 +364,7 @@ export function createGroup(params: {
 export function addGroupMembers(
   requesterId: string,
   groupId: string,
-  newMemberIds: string[]
+  input: string[] | { memberIds?: string[]; usernames?: string[] }
 ): { ok: boolean; status: number; error?: string; group?: StoredGroup } {
   const store = ensureStore();
   const group = store.groups.find((g) => g.id === groupId);
@@ -373,13 +373,35 @@ export function addGroupMembers(
     return { ok: false, status: 403, error: 'forbidden' };
   }
 
-  const friendSet = new Set(getFriendIds(requesterId));
-  const merged = new Set(group.memberIds);
-  for (const id of newMemberIds) {
-    if (friendSet.has(id) && getPublicSummaryById(id)) {
-      merged.add(id);
+  const memberIds = Array.isArray(input) ? input : input.memberIds ?? [];
+  const usernames = Array.isArray(input) ? [] : input.usernames ?? [];
+
+  const resolvedFromUsernames: string[] = [];
+  for (const rawName of usernames) {
+    const clean = rawName.trim().replace(/^@+/, '');
+    if (!clean) continue;
+    const foundId = findPlayerIdByUsername(clean);
+    if (!foundId || !getPublicSummaryById(foundId)) {
+      return { ok: false, status: 404, error: 'user_not_found' };
     }
+    resolvedFromUsernames.push(foundId);
   }
+
+  const merged = new Set(group.memberIds);
+  let addedCount = 0;
+
+  for (const id of [...memberIds, ...resolvedFromUsernames]) {
+    if (!getPublicSummaryById(id)) continue;
+    if (merged.has(id)) continue;
+    if (merged.size >= 24) break;
+    merged.add(id);
+    addedCount += 1;
+  }
+
+  if (addedCount === 0) {
+    return { ok: false, status: 409, error: 'already_in_group' };
+  }
+
   group.memberIds = Array.from(merged).slice(0, 24);
   persistStore();
   return { ok: true, status: 200, group };

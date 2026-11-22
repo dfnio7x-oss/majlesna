@@ -10,12 +10,18 @@ export const GameTrivia: React.FC<GameProps> = ({
   onScoreProgress,
 }) => {
   const questions = useMemo(() => {
-    const copy = [...QUIZ_QUESTIONS];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy.slice(0, 8);
+    const shuffle = <T,>(arr: T[]) => {
+      const c = [...arr];
+      for (let i = c.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [c[i], c[j]] = [c[j], c[i]];
+      }
+      return c;
+    };
+    const easy = shuffle(QUIZ_QUESTIONS.filter((q) => q.difficulty === 1));
+    const med = shuffle(QUIZ_QUESTIONS.filter((q) => q.difficulty === 2));
+    const hard = shuffle(QUIZ_QUESTIONS.filter((q) => q.difficulty === 3));
+    return [...easy.slice(0, 5), ...med.slice(0, 5), ...hard.slice(0, 5)];
   }, []);
 
   const [index, setIndex] = useState(0);
@@ -61,7 +67,7 @@ export const GameTrivia: React.FC<GameProps> = ({
     window.setTimeout(() => {
       if (index + 1 >= questions.length) {
         onFinish({
-          outcome: nextCorrect >= 4 ? 'win' : 'loss',
+          outcome: nextCorrect >= 8 ? 'win' : 'loss',
           score: nextScore,
           summaryText:
             lang === 'ar'

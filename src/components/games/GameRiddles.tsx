@@ -15,7 +15,7 @@ export const GameRiddles: React.FC<GameProps> = ({
       const j = Math.floor(Math.random() * (i + 1));
       [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-    return copy.slice(0, 6);
+    return copy.slice(0, 14);
   }, []);
 
   const [idx, setIdx] = useState(0);
@@ -47,7 +47,7 @@ export const GameRiddles: React.FC<GameProps> = ({
     window.setTimeout(() => {
       if (idx + 1 >= riddles.length) {
         onFinish({
-          outcome: nextSolved >= 3 ? 'win' : 'loss',
+          outcome: nextSolved >= 8 ? 'win' : 'loss',
           score: nextScore,
           summaryText:
             lang === 'ar'

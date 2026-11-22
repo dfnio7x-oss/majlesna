@@ -15,7 +15,7 @@ export const GameTrueFalse: React.FC<GameProps> = ({
       const j = Math.floor(Math.random() * (i + 1));
       [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-    return copy.slice(0, 8);
+    return copy.slice(0, 18);
   }, []);
 
   const [idx, setIdx] = useState(0);
@@ -46,7 +46,7 @@ export const GameTrueFalse: React.FC<GameProps> = ({
     window.setTimeout(() => {
       if (idx + 1 >= items.length) {
         onFinish({
-          outcome: nextCount >= 5 ? 'win' : 'loss',
+          outcome: nextCount >= 10 ? 'win' : 'loss',
           score: nextScore,
           summaryText:
             lang === 'ar'

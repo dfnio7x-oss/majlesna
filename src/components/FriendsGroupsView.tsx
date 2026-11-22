@@ -47,7 +47,10 @@ interface FriendsGroupsViewProps {
     name: string,
     memberIds: string[]
   ) => Promise<{ ok: boolean; groupId?: string; error?: string }>;
-  onAddGroupMembers: (groupId: string, memberIds: string[]) => Promise<boolean>;
+  onAddGroupMembers: (
+    groupId: string,
+    payload: string[] | { memberIds?: string[]; usernames?: string[] }
+  ) => Promise<{ ok: boolean; error?: string }>;
   onLeaveGroup: (groupId: string) => Promise<boolean>;
   onSendGroupMessage: (groupId: string, text: string) => Promise<boolean>;
   onInviteGroupToRoom: (
@@ -131,6 +134,10 @@ export const FriendsGroupsView: React.FC<FriendsGroupsViewProps> = ({
 
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [addMemberIds, setAddMemberIds] = useState<string[]>([]);
+  const [addMemberUsername, setAddMemberUsername] = useState('');
+  const [addMemberBusy, setAddMemberBusy] = useState(false);
+  const [addMemberFeedback, setAddMemberFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [memberSearchResults, setMemberSearchResults] = useState<FriendSearchResultItem[]>([]);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteGameId, setInviteGameId] = useState<GameId>('xo');
@@ -239,12 +246,63 @@ export const FriendsGroupsView: React.FC<FriendsGroupsViewProps> = ({
 
   const handleAddMembersSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeGroup || addMemberIds.length === 0) return;
+    if (!activeGroup || addMemberBusy) return;
+    const cleanUsername = addMemberUsername.trim().replace(/^@+/, '');
+    if (addMemberIds.length === 0 && !cleanUsername) return;
+
     soundEngine.playClick();
-    const ok = await onAddGroupMembers(activeGroup.id, addMemberIds);
-    if (ok) {
-      setAddMemberIds([]);
-      setShowAddMembers(false);
+    setAddMemberBusy(true);
+    setAddMemberFeedback(null);
+    try {
+      const res = await onAddGroupMembers(activeGroup.id, {
+        memberIds: addMemberIds,
+        usernames: cleanUsername ? [cleanUsername] : [],
+      });
+      if (res.ok) {
+        soundEngine.playSelect();
+        setAddMemberIds([]);
+        setAddMemberUsername('');
+        setMemberSearchResults([]);
+        setAddMemberFeedback({ ok: true, text: copy.social.memberAddedSuccess });
+        onNotify('join', copy.social.memberAddedSuccess);
+        setShowAddMembers(false);
+      } else {
+        soundEngine.playError();
+        const errText =
+          res.error === 'already_in_group'
+            ? copy.social.memberAlreadyInGroup
+            : copy.social.userNotFound;
+        setAddMemberFeedback({ ok: false, text: errText });
+      }
+    } finally {
+      setAddMemberBusy(false);
+    }
+  };
+
+  const handleQuickAddMemberByUsername = async (username: string) => {
+    if (!activeGroup || addMemberBusy) return;
+    setAddMemberBusy(true);
+    setAddMemberFeedback(null);
+    soundEngine.playClick();
+    try {
+      const res = await onAddGroupMembers(activeGroup.id, { usernames: [username] });
+      if (res.ok) {
+        soundEngine.playSelect();
+        setAddMemberUsername('');
+        setMemberSearchResults([]);
+        setAddMemberFeedback({ ok: true, text: copy.social.memberAddedSuccess });
+        onNotify('join', copy.social.memberAddedSuccess);
+        setShowAddMembers(false);
+      } else {
+        soundEngine.playError();
+        const errText =
+          res.error === 'already_in_group'
+            ? copy.social.memberAlreadyInGroup
+            : copy.social.userNotFound;
+        setAddMemberFeedback({ ok: false, text: errText });
+      }
+    } finally {
+      setAddMemberBusy(false);
     }
   };
 
@@ -738,16 +796,18 @@ export const FriendsGroupsView: React.FC<FriendsGroupsViewProps> = ({
                     <span>{copy.social.inviteGroupRoomBtn}</span>
                   </button>
 
-                  {friendsNotInActiveGroup.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddMembers((v) => !v)}
-                      className="h-9 px-3 rounded-xl border border-[#E5DEC9] dark:border-[#342E28] bg-[#FAF8F4] dark:bg-[#25211D] text-xs font-semibold text-[#1C1917] dark:text-[#F5F2EB] flex items-center gap-1 cursor-pointer"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>{copy.social.addMembersBtn}</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playClick();
+                      setAddMemberFeedback(null);
+                      setShowAddMembers((v) => !v);
+                    }}
+                    className="h-9 px-3.5 rounded-xl border border-[#E5DEC9] dark:border-[#342E28] bg-[#FAF8F4] dark:bg-[#25211D] hover:bg-[#F1ECE2] dark:hover:bg-[#2E2924] text-xs font-semibold text-[#1C1917] dark:text-[#F5F2EB] flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 text-[#C84B31]" />
+                    <span>{copy.social.addMembersBtn}</span>
+                  </button>
 
                   <button
                     type="button"
@@ -764,53 +824,134 @@ export const FriendsGroupsView: React.FC<FriendsGroupsViewProps> = ({
                 </div>
               </div>
 
-              {/* Add Members Drawer */}
-              {showAddMembers && friendsNotInActiveGroup.length > 0 && (
+              {/* Add Members Drawer (Always accessible: by @username or friend pick) */}
+              {showAddMembers && (
                 <form
                   onSubmit={handleAddMembersSubmit}
-                  className="p-3.5 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] space-y-2.5"
+                  className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] space-y-3"
                 >
-                  <p className="text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-                    {copy.social.pickFriendsLabel}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {friendsNotInActiveGroup.map((friend) => {
-                      const checked = addMemberIds.includes(friend.id);
-                      return (
-                        <button
-                          key={friend.id}
-                          type="button"
-                          onClick={() =>
-                            setAddMemberIds((prev) =>
-                              checked ? prev.filter((id) => id !== friend.id) : [...prev, friend.id]
-                            )
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="group-add-member-username"
+                      className="block text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]"
+                    >
+                      {copy.social.addMembersBtn} (@username)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        id="group-add-member-username"
+                        type="text"
+                        value={addMemberUsername}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAddMemberUsername(val);
+                          setAddMemberFeedback(null);
+                          const cleaned = val.trim().replace(/^@+/, '');
+                          if (cleaned.length >= 2) {
+                            void onSearchUsers(cleaned).then((list) => {
+                              const existingSet = new Set(activeGroup.memberIds);
+                              setMemberSearchResults(
+                                list.filter((item) => !existingSet.has(item.user.id)).slice(0, 5)
+                              );
+                            });
+                          } else {
+                            setMemberSearchResults([]);
                           }
-                          className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
-                            checked
-                              ? 'bg-[#C84B31]/12 border-[#C84B31] text-[#C84B31]'
-                              : 'bg-white dark:bg-[#1E1B18] border-[#E5DEC9] dark:border-[#342E28]'
-                          }`}
-                        >
-                          @{friend.username}
-                        </button>
-                      );
-                    })}
+                        }}
+                        placeholder={copy.social.addMemberByUsernamePlaceholder}
+                        className="flex-1 h-9 px-3 rounded-xl bg-white dark:bg-[#1E1B18] border border-[#E5DEC9] dark:border-[#342E28] text-xs text-[#1C1917] dark:text-[#F5F2EB] focus:outline-none focus:border-[#C84B31]"
+                      />
+                      <button
+                        type="submit"
+                        disabled={addMemberBusy || (addMemberIds.length === 0 && !addMemberUsername.trim())}
+                        className="h-9 px-3.5 rounded-xl bg-[#2D6A4F] hover:bg-[#24553F] text-white text-xs font-semibold disabled:opacity-45 cursor-pointer shrink-0"
+                      >
+                        {copy.social.addMemberByUsernameBtn}
+                      </button>
+                    </div>
                   </div>
+
+                  {memberSearchResults.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {memberSearchResults.map((item) => (
+                        <button
+                          key={item.user.id}
+                          type="button"
+                          onClick={() => void handleQuickAddMemberByUsername(item.user.username)}
+                          className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#1E1B18] border border-[#E5DEC9] dark:border-[#342E28] hover:border-[#C84B31] text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span dir="ltr">@{item.user.username}</span>
+                          {renderPresenceBesideName(resolveOnline(item.user.id, item.user.online))}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {friendsNotInActiveGroup.length > 0 ? (
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
+                        {copy.social.pickFriendsLabel}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {friendsNotInActiveGroup.map((friend) => {
+                          const checked = addMemberIds.includes(friend.id);
+                          return (
+                            <button
+                              key={friend.id}
+                              type="button"
+                              onClick={() =>
+                                setAddMemberIds((prev) =>
+                                  checked ? prev.filter((id) => id !== friend.id) : [...prev, friend.id]
+                                )
+                              }
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer ${
+                                checked
+                                  ? 'bg-[#C84B31]/12 border-[#C84B31] text-[#C84B31]'
+                                  : 'bg-white dark:bg-[#1E1B18] border-[#E5DEC9] dark:border-[#342E28]'
+                              }`}
+                            >
+                              @{friend.username}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-[#8C8478]">{copy.social.noMoreFriendsToAdd}</p>
+                  )}
+
+                  {addMemberFeedback && (
+                    <p
+                      className={`text-xs font-semibold ${
+                        addMemberFeedback.ok
+                          ? 'text-[#2D6A4F] dark:text-[#52B788]'
+                          : 'text-[#C84B31] dark:text-[#F87171]'
+                      }`}
+                    >
+                      {addMemberFeedback.text}
+                    </p>
+                  )}
+
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
-                      onClick={() => setShowAddMembers(false)}
+                      onClick={() => {
+                        setShowAddMembers(false);
+                        setAddMemberFeedback(null);
+                      }}
                       className="text-xs font-semibold text-[#8C8478] px-2 cursor-pointer"
                     >
                       {copy.actions.cancel}
                     </button>
-                    <button
-                      type="submit"
-                      disabled={addMemberIds.length === 0}
-                      className="h-8 px-3 rounded-lg bg-[#2D6A4F] text-white text-xs font-semibold disabled:opacity-45 cursor-pointer"
-                    >
-                      {copy.social.addMembersBtn}
-                    </button>
+                    {addMemberIds.length > 0 && (
+                      <button
+                        type="submit"
+                        disabled={addMemberBusy}
+                        className="h-8 px-4 rounded-lg bg-[#C84B31] hover:bg-[#B03E26] text-white text-xs font-semibold disabled:opacity-45 cursor-pointer"
+                      >
+                        {copy.social.addMemberByUsernameBtn} ({addMemberIds.length})
+                      </button>
+                    )}
                   </div>
                 </form>
               )}

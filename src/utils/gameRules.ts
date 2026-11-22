@@ -140,9 +140,9 @@ export interface MathQuestion {
 }
 
 export function generateMathQuestion(level: number, rng: () => number = Math.random): MathQuestion {
-  const ops = level >= 4 ? ['+', '-', '×'] : ['+', '-'];
+  const ops = level >= 6 ? ['+', '-', '×', '÷'] : level >= 4 ? ['+', '-', '×'] : ['+', '-'];
   const op = ops[Math.floor(rng() * ops.length)];
-  const maxNum = Math.min(12 + level * 6, 65);
+  const maxNum = Math.min(12 + level * 7, 85);
   let a = Math.floor(rng() * maxNum) + 2;
   let b = Math.floor(rng() * maxNum) + 2;
   let answer = 0;
@@ -152,8 +152,12 @@ export function generateMathQuestion(level: number, rng: () => number = Math.ran
   } else if (op === '-') {
     if (b > a) [a, b] = [b, a];
     answer = a - b;
+  } else if (op === '÷') {
+    b = Math.floor(rng() * 10) + 2;
+    answer = Math.floor(rng() * (8 + level * 2)) + 2;
+    a = b * answer;
   } else {
-    a = Math.floor(rng() * 11) + 2;
+    a = Math.floor(rng() * (10 + Math.min(6, level))) + 2;
     b = Math.floor(rng() * 11) + 2;
     answer = a * b;
   }
@@ -212,7 +216,7 @@ export interface MafiaPlayerState {
 
 export function assignMafiaRoles(playerIds: string[], rng: () => number = Math.random): Record<string, MafiaRole> {
   const shuffled = [...playerIds].sort(() => rng() - 0.5);
-  const mafiaCount = shuffled.length >= 7 ? 2 : 1;
+  const mafiaCount = shuffled.length >= 9 ? 3 : shuffled.length >= 7 ? 2 : 1;
   const assignments: Record<string, MafiaRole> = {};
 
   shuffled.forEach((id, idx) => {

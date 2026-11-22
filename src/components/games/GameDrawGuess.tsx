@@ -6,6 +6,7 @@ import { DRAW_PROMPTS } from '../../data/questionBank';
 import { soundEngine } from '../../utils/soundEngine';
 
 const PALETTE = ['#1C1917', '#C84B31', '#2D6A4F', '#2B4C7E', '#D97706', '#7C3AED'];
+const LOCAL_DRAW_STAGES = 6;
 
 export const GameDrawGuess: React.FC<GameProps> = ({
   lang,
@@ -14,6 +15,7 @@ export const GameDrawGuess: React.FC<GameProps> = ({
   room,
   secrets,
   onFinish,
+  onScoreProgress,
   onRoomAction,
   subscribeStrokes,
 }) => {
@@ -27,7 +29,9 @@ export const GameDrawGuess: React.FC<GameProps> = ({
   const [localStrokes, setLocalStrokes] = useState<DrawStroke[]>([]);
   const [guessInput, setGuessInput] = useState('');
 
-  // Solo / Local Pass & Play prompt state
+  // Solo / Local Pass & Play 6-stage state
+  const [localStage, setLocalStage] = useState(1);
+  const [localScore, setLocalScore] = useState(0);
   const [localPromptIdx, setLocalPromptIdx] = useState(() =>
     Math.floor(Math.random() * DRAW_PROMPTS.ar.length)
   );
@@ -169,6 +173,33 @@ export const GameDrawGuess: React.FC<GameProps> = ({
     }
   };
 
+  const completeLocalStage = (stagePoints: number, feedbackMsg?: string) => {
+    const nextScore = localScore + stagePoints;
+    setLocalScore(nextScore);
+    onScoreProgress?.(nextScore);
+
+    if (localStage >= LOCAL_DRAW_STAGES) {
+      onFinish({
+        outcome: 'win',
+        score: nextScore,
+        summaryText:
+          lang === 'ar'
+            ? `أنجزت جميع لوحات الرسم الست! آخر كلمة: ${displayWord}`
+            : `Completed all 6 sketch stages! Last word: ${displayWord}`,
+      });
+      return;
+    }
+
+    if (feedbackMsg) setLocalGuessResult(feedbackMsg);
+    window.setTimeout(() => {
+      setLocalStage((s) => s + 1);
+      setLocalPromptIdx((i) => (i + 7) % DRAW_PROMPTS.ar.length);
+      setLocalStrokes([]);
+      setLocalGuessResult(null);
+      setHideWordForFriend(false);
+    }, 650);
+  };
+
   const handleGuessSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = guessInput.trim();
@@ -186,12 +217,7 @@ export const GameDrawGuess: React.FC<GameProps> = ({
       text.toLowerCase() === (wordEn ?? '').toLowerCase();
     if (match) {
       soundEngine.playPoint();
-      setLocalGuessResult(lang === 'ar' ? 'إجابة صحيحة!' : 'Correct guess!');
-      onFinish({
-        outcome: 'win',
-        score: 90,
-        summaryText: `${lang === 'ar' ? 'الكلمة:' : 'Word:'} ${displayWord}`,
-      });
+      completeLocalStage(30, lang === 'ar' ? 'إجابة صحيحة! جاري الانتقال للوحة التالية...' : 'Correct! Next prompt...');
     } else {
       soundEngine.playError();
       setLocalGuessResult(lang === 'ar' ? 'حاول مرة أخرى!' : 'Not quite, try again!');
@@ -223,18 +249,23 @@ export const GameDrawGuess: React.FC<GameProps> = ({
         )}
 
         {mode !== 'online' && (
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.playClick();
-              setLocalPromptIdx((i) => (i + 1) % DRAW_PROMPTS.ar.length);
-              setLocalStrokes([]);
-              setLocalGuessResult(null);
-            }}
-            className="text-xs font-semibold text-[#2B4C7E] cursor-pointer"
-          >
-            {lang === 'ar' ? 'كلمة جديدة' : 'New Prompt'}
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="font-mono-tabular text-xs font-bold text-[#2D6A4F]">
+              {lang === 'ar' ? `لوحة ${localStage}/${LOCAL_DRAW_STAGES}` : `Stage ${localStage}/${LOCAL_DRAW_STAGES}`} · {localScore} pts
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                soundEngine.playClick();
+                setLocalPromptIdx((i) => (i + 1) % DRAW_PROMPTS.ar.length);
+                setLocalStrokes([]);
+                setLocalGuessResult(null);
+              }}
+              className="text-xs font-semibold text-[#2B4C7E] cursor-pointer"
+            >
+              {lang === 'ar' ? 'كلمة جديدة' : 'New Prompt'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -318,15 +349,13 @@ export const GameDrawGuess: React.FC<GameProps> = ({
                 type="button"
                 onClick={() => {
                   soundEngine.playPoint();
-                  onFinish({
-                    outcome: 'win',
-                    score: 75,
-                    summaryText: `${lang === 'ar' ? 'لوحة رائعة لـ' : 'Finished sketch:'} ${displayWord}`,
-                  });
+                  completeLocalStage(25);
                 }}
                 className="h-8 px-4 rounded-lg bg-[#2D6A4F] text-white text-xs font-semibold cursor-pointer"
               >
-                {lang === 'ar' ? 'إنهاء الرسم' : 'Finish Sketch'}
+                {localStage >= LOCAL_DRAW_STAGES
+                  ? lang === 'ar' ? 'إنهاء الرسم' : 'Finish Sketch'
+                  : lang === 'ar' ? 'اللوحة التالية' : 'Next Sketch'}
               </button>
             )}
           </div>

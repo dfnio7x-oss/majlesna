@@ -38,7 +38,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws')) return;
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/ws') ||
+    url.pathname.startsWith('/__/')
+  ) {
+    return;
+  }
 
   // Navigation requests: Network-first with offline.html fallback
   if (request.mode === 'navigate') {

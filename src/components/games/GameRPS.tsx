@@ -75,6 +75,8 @@ export const GameRPS: React.FC<GameProps> = ({
     }
   }, [room?.status]);
 
+  const totalRounds = mode === 'online' ? (onlineState?.maxRounds ?? 5) : 10;
+
   const handlePick = (choice: RPSChoice) => {
     soundEngine.playClick();
 
@@ -105,10 +107,10 @@ export const GameRPS: React.FC<GameProps> = ({
           ? lang === 'ar' ? 'نقطة للاعب ١!' : 'Point for Player 1!'
           : lang === 'ar' ? 'نقطة للاعب ٢!' : 'Point for Player 2!'
       );
-      if (round >= 5) {
+      if (round >= totalRounds) {
         onFinish({
           outcome: nextScores.p1 === nextScores.p2 ? 'draw' : 'win',
-          score: Math.max(nextScores.p1, nextScores.p2) * 30,
+          score: Math.max(nextScores.p1, nextScores.p2) * 25 + 20,
         });
       } else {
         window.setTimeout(() => {
@@ -116,7 +118,7 @@ export const GameRPS: React.FC<GameProps> = ({
           setP1Pick(null);
           setP2Pick(null);
           setLocalTurn(1);
-        }, 1200);
+        }, 1000);
       }
       return;
     }
@@ -140,11 +142,11 @@ export const GameRPS: React.FC<GameProps> = ({
     );
     if (res === 'p1') soundEngine.playPoint();
 
-    if (round >= 5) {
+    if (round >= totalRounds) {
       window.setTimeout(() => {
         const outcome =
           nextScores.p1 > nextScores.p2 ? 'win' : nextScores.p1 < nextScores.p2 ? 'loss' : 'draw';
-        onFinish({ outcome, score: nextScores.p1 * 30 + 20 });
+        onFinish({ outcome, score: nextScores.p1 * 25 + 25 });
       }, 950);
     } else {
       window.setTimeout(() => {
@@ -152,7 +154,7 @@ export const GameRPS: React.FC<GameProps> = ({
         setP1Pick(null);
         setP2Pick(null);
         setLastResult(null);
-      }, 1100);
+      }, 950);
     }
   };
 
@@ -164,7 +166,7 @@ export const GameRPS: React.FC<GameProps> = ({
         <div>
           <p className="text-xs text-[#57534E] dark:text-[#B8AFA3]">{lang === 'ar' ? 'الجولة' : 'Round'}</p>
           <p className="font-mono-tabular text-xl font-bold text-[#1C1917] dark:text-[#F5F2EB]">
-            {onlineState?.round ?? round} / 5
+            {onlineState?.round ?? round} / {totalRounds}
           </p>
         </div>
         {mode !== 'online' && (

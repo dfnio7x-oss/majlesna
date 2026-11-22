@@ -17,15 +17,27 @@ const EN_KEYS = [
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ];
 
+const TOTAL_WORD_STAGES = 4;
+
 export const GameGuessWord: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const target = useMemo(() => {
-    const list = FIVE_LETTER_WORDS[lang];
-    return list[Math.floor(Math.random() * list.length)];
+  const stageWords = useMemo(() => {
+    const copy = [...FIVE_LETTER_WORDS[lang]];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy.slice(0, TOTAL_WORD_STAGES);
   }, [lang]);
 
+  const [stageIdx, setStageIdx] = useState(0);
   const [guesses, setGuesses] = useState<{ word: string; evals: LetterStatus[] }[]>([]);
   const [current, setCurrent] = useState('');
   const [done, setDone] = useState(false);
+  const [totalScore, setTotalScore] = useState(0);
+  const [solvedCount, setSolvedCount] = useState(0);
+  const [stageBanner, setStageBanner] = useState<string | null>(null);
+
+  const target = stageWords[stageIdx];
 
   const keyStatuses = useMemo(() => {
     const map = new Map<string, LetterStatus>();
@@ -41,21 +53,53 @@ export const GameGuessWord: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
   }, [guesses]);
 
   const handleKey = (ch: string) => {
-    if (done || Array.from(current).length >= 5) return;
+    if (done || stageBanner || Array.from(current).length >= 5) return;
     soundEngine.playClick();
     setCurrent((prev) => prev + ch);
   };
 
   const handleBackspace = () => {
-    if (done || current.length === 0) return;
+    if (done || stageBanner || current.length === 0) return;
     soundEngine.playClick();
     const arr = Array.from(current);
     arr.pop();
     setCurrent(arr.join(''));
   };
 
+  const advanceOrFinish = (wonStage: boolean, nextScore: number, nextSolved: number) => {
+    if (stageIdx + 1 >= TOTAL_WORD_STAGES) {
+      setDone(true);
+      onFinish({
+        outcome: nextSolved >= 2 ? 'win' : 'loss',
+        score: Math.max(25, nextScore),
+        summaryText:
+          lang === 'ar'
+            ? `أنهيت ${nextSolved} من ${TOTAL_WORD_STAGES} مراحل · الكلمة الأخيرة: ${target}`
+            : `Solved ${nextSolved}/${TOTAL_WORD_STAGES} words · Last word: ${target}`,
+      });
+      return;
+    }
+
+    setStageBanner(
+      wonStage
+        ? lang === 'ar'
+          ? `أحسنت! (${target}) — جاري الانتقال للمرحلة ${stageIdx + 2}`
+          : `Solved (${target}) — Next stage ${stageIdx + 2}!`
+        : lang === 'ar'
+        ? `الكلمة كانت: ${target} — جاري الانتقال للمرحلة ${stageIdx + 2}`
+        : `Word was: ${target} — Advancing to Stage ${stageIdx + 2}`
+    );
+
+    window.setTimeout(() => {
+      setStageIdx((s) => s + 1);
+      setGuesses([]);
+      setCurrent('');
+      setStageBanner(null);
+    }, 1050);
+  };
+
   const handleSubmit = () => {
-    if (done || Array.from(current).length !== 5) {
+    if (done || stageBanner || Array.from(current).length !== 5) {
       soundEngine.playError();
       return;
     }
@@ -66,22 +110,17 @@ export const GameGuessWord: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
 
     const won = evals.every((e) => e === 'correct');
     if (won) {
-      setDone(true);
       soundEngine.playPoint();
-      const score = Math.max(40, 140 - (nextGuesses.length - 1) * 18);
-      onScoreProgress?.(score);
-      onFinish({
-        outcome: 'win',
-        score,
-        summaryText: lang === 'ar' ? `الكلمة كانت: ${target}` : `Solved word: ${target}`,
-      });
+      const stageScore = Math.max(35, 110 - (nextGuesses.length - 1) * 14);
+      const nextScore = totalScore + stageScore;
+      const nextSolved = solvedCount + 1;
+      setTotalScore(nextScore);
+      setSolvedCount(nextSolved);
+      onScoreProgress?.(nextScore);
+      advanceOrFinish(true, nextScore, nextSolved);
     } else if (nextGuesses.length >= 6) {
-      setDone(true);
-      onFinish({
-        outcome: 'loss',
-        score: 20,
-        summaryText: lang === 'ar' ? `الكلمة الصحيحة هي: ${target}` : `The word was: ${target}`,
-      });
+      soundEngine.playError();
+      advanceOrFinish(false, totalScore, solvedCount);
     } else {
       soundEngine.playClick();
     }
@@ -91,11 +130,28 @@ export const GameGuessWord: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
   const keyboardRows = lang === 'ar' ? AR_KEYS : EN_KEYS;
 
   return (
-    <div className="max-w-lg mx-auto space-y-5">
+    <div className="max-w-lg mx-auto space-y-4">
+      <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] text-xs font-semibold">
+        <span className="text-[#57534E] dark:text-[#B8AFA3]">
+          {lang === 'ar'
+            ? `المرحلة ${stageIdx + 1} / ${TOTAL_WORD_STAGES}`
+            : `Stage ${stageIdx + 1} / ${TOTAL_WORD_STAGES}`}
+        </span>
+        <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">
+          {totalScore} pts ({solvedCount}/{TOTAL_WORD_STAGES})
+        </span>
+      </div>
+
+      {stageBanner && (
+        <div className="p-2.5 rounded-xl bg-[#D97706]/12 border border-[#D97706]/30 text-center text-xs font-bold text-[#92400E] dark:text-[#FBBF24]">
+          {stageBanner}
+        </div>
+      )}
+
       <div className="space-y-2 max-w-[310px] mx-auto">
         {rows.map((_, rowIdx) => {
           const submitted = guesses[rowIdx];
-          const isCurrent = rowIdx === guesses.length && !done;
+          const isCurrent = rowIdx === guesses.length && !done && !stageBanner;
           const letters = submitted
             ? Array.from(submitted.word)
             : isCurrent

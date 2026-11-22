@@ -15,7 +15,7 @@ export const GameGuessCharacter: React.FC<GameProps> = ({
       const j = Math.floor(Math.random() * (i + 1));
       [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-    return copy.slice(0, 4);
+    return copy.slice(0, 8);
   }, []);
 
   const [roundIdx, setRoundIdx] = useState(0);
@@ -48,7 +48,7 @@ export const GameGuessCharacter: React.FC<GameProps> = ({
     window.setTimeout(() => {
       if (roundIdx + 1 >= puzzles.length) {
         onFinish({
-          outcome: nextSolved >= 2 ? 'win' : 'loss',
+          outcome: nextSolved >= 4 ? 'win' : 'loss',
           score: nextScore,
           summaryText:
             lang === 'ar'

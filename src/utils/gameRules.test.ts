@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   checkXOWinner,
   getBestXOMove,
@@ -27,6 +29,15 @@ import {
   verifySecretArgon2id,
   validateUsernameFormat,
 } from '../../server/securityCrypto';
+import { FIVE_LETTER_WORDS, MILLIONAIRE_TIERS } from '../data/questionBank';
+import { CROSSWORD_PUZZLES, WORD_SEARCH_BOARDS } from '../data/phase2Bank';
+import {
+  changeRegisteredUsername,
+  checkUsernameAvailability,
+  claimInitialUsername,
+  registerWithUsernamePassword,
+  resetProfileStoreCacheForTests,
+} from '../../server/profileStore';
 import type { PlayerProfile } from '../types/game';
 
 test('XO winner detection and AI move selection', () => {
@@ -204,5 +215,186 @@ test('Server security: username validation, AES-256-GCM, HMAC blind index, Argon
   assert.ok(hash.startsWith('$argon2id$'));
   assert.equal(await verifySecretArgon2id(hash, '4829'), true);
   assert.equal(await verifySecretArgon2id(hash, '0000'), false);
+});
+
+test('Expanded Math level 8 division/high-operand questions & 9-player Mafia roles', () => {
+  let sawDivision = false;
+  for (let i = 0; i < 40; i += 1) {
+    const seed = (i * 0.0249 + 0.01) % 1;
+    let calls = 0;
+    const rng = () => {
+      calls += 1;
+      // Cover operator index 3 (÷) on high seeds and vary operands
+      return ((seed + calls * 0.17) % 1);
+    };
+    const q = generateMathQuestion(8, rng);
+    assert.equal(q.options.length, 4);
+    assert.equal(new Set(q.options).size, 4);
+    assert.ok(q.options.includes(q.answer));
+    if (q.prompt.includes('÷')) {
+      sawDivision = true;
+      assert.equal(Number.isInteger(q.answer), true);
+    }
+  }
+  assert.equal(sawDivision, true);
+
+  const nineRoles = assignMafiaRoles(['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9']);
+  const nineMafiaCount = Object.values(nineRoles).filter((r) => r === 'mafia').length;
+  assert.equal(nineMafiaCount, 3);
+});
+
+test('QuestionBank & Phase2Bank integrity: 5-letter words, 20 Millionaire tiers, Crosswords, Word Search', () => {
+  assert.equal(MILLIONAIRE_TIERS.length, 20);
+
+  for (const lang of ['ar', 'en'] as const) {
+    for (const w of FIVE_LETTER_WORDS[lang]) {
+      assert.equal(Array.from(w).length, 5, `Expected 5-letter word for ${lang}: ${w}`);
+    }
+
+    for (const [pIdx, puzzle] of CROSSWORD_PUZZLES[lang].entries()) {
+      for (const [dir, list] of [
+        ['across', puzzle.clues.across],
+        ['down', puzzle.clues.down],
+      ] as const) {
+        for (const clue of list) {
+          const chars = Array.from(clue.answer);
+          assert.ok(chars.length > 0, `Empty clue answer in ${lang} crossword #${pIdx}`);
+          for (let i = 0; i < chars.length; i += 1) {
+            const r = dir === 'across' ? clue.row : clue.row + i;
+            const c = dir === 'across' ? clue.col + i : clue.col;
+            const cell = puzzle.grid[r]?.[c];
+            assert.equal(
+              cell,
+              chars[i],
+              `Crossword ${lang}/#${pIdx} (${dir}) "${clue.clue[lang]}" mismatch at (${r},${c}): expected "${chars[i]}", got "${cell}"`
+            );
+          }
+        }
+      }
+    }
+
+    const dirs = [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ];
+    for (const board of WORD_SEARCH_BOARDS[lang]) {
+      const rows = board.grid.length;
+      const cols = board.grid[0]?.length ?? 0;
+      for (const word of board.words) {
+        const chars = Array.from(word);
+        let found = false;
+        for (let r = 0; r < rows && !found; r += 1) {
+          for (let c = 0; c < cols && !found; c += 1) {
+            for (const [dr, dc] of dirs) {
+              let match = true;
+              for (let k = 0; k < chars.length; k += 1) {
+                const nr = r + dr * k;
+                const nc = c + dc * k;
+                if (nr < 0 || nr >= rows || nc < 0 || nc >= cols || board.grid[nr][nc] !== chars[k]) {
+                  match = false;
+                  break;
+                }
+              }
+              if (match) {
+                found = true;
+                break;
+              }
+            }
+          }
+        }
+        assert.equal(found, true, `Word "${word}" not found on ${lang} word-search board`);
+      }
+    }
+  }
+});
+
+test('Username permanent lock prevents reuse of active and retired usernames across restarts', async () => {
+  const dataDir = path.resolve(process.cwd(), 'data');
+  const profilesFile = path.join(dataDir, 'profiles.json');
+  const hadProfilesFile = fs.existsSync(profilesFile);
+  const originalContent = hadProfilesFile ? fs.readFileSync(profilesFile, 'utf-8') : null;
+
+  try {
+    resetProfileStoreCacheForTests();
+    const u1 = `ut_alpha_${Date.now().toString(36).slice(-5)}`;
+    const u2 = `ut_beta_${Date.now().toString(36).slice(-5)}`;
+
+    const reg = await registerWithUsernamePassword({
+      rawUsername: u1,
+      password: 'SecretPassword123',
+      avatarId: 0,
+      accentColor: '#C84B31',
+    });
+    assert.equal(reg.ok, true);
+    assert.ok(reg.profile?.id);
+
+    // Active username cannot be reused
+    const dup = await registerWithUsernamePassword({
+      rawUsername: u1,
+      password: 'AnotherPassword123',
+      avatarId: 1,
+      accentColor: '#2D6A4F',
+    });
+    assert.equal(dup.ok, false);
+    assert.equal(dup.reason, 'taken');
+
+    // Cooldown must reject immediate rename before expiring
+    const blockedRename = await changeRegisteredUsername({
+      playerId: reg.profile!.id,
+      rawUsername: u2,
+    });
+    assert.equal(blockedRename.ok, false);
+    assert.equal(blockedRename.reason, 'cooldown_active');
+
+    // Simulate 7 days passing on persisted store
+    const parsed = JSON.parse(fs.readFileSync(profilesFile, 'utf-8')) as {
+      records: Record<string, { profile: PlayerProfile }>;
+    };
+    parsed.records[reg.profile!.id].profile.nextUsernameChangeAt = new Date(Date.now() - 60_000).toISOString();
+    fs.writeFileSync(profilesFile, JSON.stringify(parsed, null, 2), 'utf-8');
+    resetProfileStoreCacheForTests();
+
+    const renamed = await changeRegisteredUsername({
+      playerId: reg.profile!.id,
+      rawUsername: u2,
+    });
+    assert.equal(renamed.ok, true);
+    assert.equal(renamed.profile?.usernameLower, u2.toLowerCase());
+
+    // Simulate server restart by clearing in-memory cache
+    resetProfileStoreCacheForTests();
+
+    const oldCheck = checkUsernameAvailability(u1, undefined, 'register');
+    assert.equal(oldCheck.available, false);
+    assert.equal(oldCheck.reason, 'retired');
+
+    const claimRetired = await claimInitialUsername({
+      playerId: `temp_claim_${Date.now()}`,
+      rawUsername: u1,
+    });
+    assert.equal(claimRetired.ok, false);
+    assert.equal(claimRetired.reason, 'retired');
+
+    const regRetired = await registerWithUsernamePassword({
+      rawUsername: u1,
+      password: 'AnotherPassword123',
+    });
+    assert.equal(regRetired.ok, false);
+    assert.equal(regRetired.reason, 'retired');
+  } finally {
+    resetProfileStoreCacheForTests();
+    if (hadProfilesFile && originalContent !== null) {
+      fs.writeFileSync(profilesFile, originalContent, 'utf-8');
+    } else if (!hadProfilesFile && fs.existsSync(profilesFile)) {
+      fs.unlinkSync(profilesFile);
+    }
+    resetProfileStoreCacheForTests();
+  }
 });
 

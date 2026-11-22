@@ -10,7 +10,7 @@ import { soundEngine } from '../../utils/soundEngine';
  * 11. FASTEST ANSWER (Buzzer Speed Trivia)
  * ============================================================================ */
 export const GameFastestAnswer: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const questions = useMemo(() => [...QUIZ_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 5), []);
+  const questions = useMemo(() => [...QUIZ_QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 14), []);
   const [idx, setIdx] = useState(0);
   const [msLeft, setMsLeft] = useState(7000);
   const [score, setScore] = useState(0);
@@ -47,7 +47,7 @@ export const GameFastestAnswer: React.FC<GameProps> = ({ lang, onFinish, onScore
     window.setTimeout(() => {
       if (idx + 1 >= questions.length) {
         onFinish({
-          outcome: nextScore >= 80 ? 'win' : 'draw',
+          outcome: nextScore >= 180 ? 'win' : 'draw',
           score: nextScore,
           summaryText: `${nextScore} pts`,
         });
@@ -56,7 +56,7 @@ export const GameFastestAnswer: React.FC<GameProps> = ({ lang, onFinish, onScore
         setMsLeft(7000);
         setPicked(null);
       }
-    }, 650);
+    }, 600);
   };
 
   return (
@@ -106,21 +106,22 @@ export const GameFastestAnswer: React.FC<GameProps> = ({ lang, onFinish, onScore
 };
 
 /* ============================================================================
- * 12. PERFECT TIMING (Oscillating Gauge Meter)
+ * 12. PERFECT TIMING (Oscillating Gauge Meter — 10 Escalating Stages)
  * ============================================================================ */
 export const GamePerfectTiming: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const TOTAL_ROUNDS = 10;
   const [round, setRound] = useState(1);
   const [pos, setPos] = useState(0);
   const [stoppedAt, setStoppedAt] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const targetCenter = 50;
-  const zoneHalfWidth = Math.max(6, 16 - round * 2);
+  const zoneHalfWidth = Math.max(4.5, 16 - round * 1.1);
 
   useEffect(() => {
     if (stoppedAt !== null) return;
     let frameId = 0;
     const start = performance.now();
-    const speed = 0.0024 + round * 0.0007;
+    const speed = 0.0022 + round * 0.00055;
     const tick = (now: number) => {
       const val = ((Math.sin((now - start) * speed) + 1) / 2) * 100;
       setPos(val);
@@ -147,9 +148,9 @@ export const GamePerfectTiming: React.FC<GameProps> = ({ lang, onFinish, onScore
     onScoreProgress?.(nextScore);
 
     window.setTimeout(() => {
-      if (round >= 4) {
+      if (round >= TOTAL_ROUNDS) {
         onFinish({
-          outcome: nextScore >= 70 ? 'win' : 'draw',
+          outcome: nextScore >= 140 ? 'win' : 'draw',
           score: nextScore,
           summaryText: `${nextScore} pts`,
         });
@@ -157,13 +158,13 @@ export const GamePerfectTiming: React.FC<GameProps> = ({ lang, onFinish, onScore
         setRound((r) => r + 1);
         setStoppedAt(null);
       }
-    }, 850);
+    }, 700);
   };
 
   return (
     <div className="max-w-lg mx-auto space-y-6 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{lang === 'ar' ? `الجولة ${round}/4` : `Round ${round}/4`}</span>
+        <span>{lang === 'ar' ? `الجولة ${round}/${TOTAL_ROUNDS}` : `Round ${round}/${TOTAL_ROUNDS}`}</span>
         <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
       </div>
 
@@ -199,9 +200,10 @@ export const GamePerfectTiming: React.FC<GameProps> = ({ lang, onFinish, onScore
 };
 
 /* ============================================================================
- * 13. REACTION DUEL (Solo or Same-Device 2P Split Duel)
+ * 13. REACTION DUEL (Solo or Same-Device 2P Split Duel — 7 Rounds)
  * ============================================================================ */
 export const GameReactionDuel: React.FC<GameProps> = ({ lang, mode, onFinish }) => {
+  const TOTAL_ROUNDS = 7;
   const [phase, setPhase] = useState<'ready' | 'wait' | 'go'>('ready');
   const [round, setRound] = useState(1);
   const [scores, setScores] = useState({ p1: 0, p2: 0 });
@@ -212,7 +214,7 @@ export const GameReactionDuel: React.FC<GameProps> = ({ lang, mode, onFinish }) 
   const triggerNext = () => {
     setPhase('wait');
     setLastNote('');
-    const delay = 1100 + Math.random() * 2000;
+    const delay = 1000 + Math.random() * 1900;
     timerRef.current = window.setTimeout(() => {
       goAtRef.current = performance.now();
       setPhase('go');
@@ -254,17 +256,24 @@ export const GameReactionDuel: React.FC<GameProps> = ({ lang, mode, onFinish }) 
     setScores(nextScores);
     setLastNote(`${ms} ms!`);
 
-    if (round >= 3) {
+    if (round >= TOTAL_ROUNDS) {
       if (mode === 'local') {
-        const win = nextScores.p1 > nextScores.p2 ? 'P1' : 'P2';
+        const win = nextScores.p1 === nextScores.p2 ? 'draw' : nextScores.p1 > nextScores.p2 ? 'P1' : 'P2';
         onFinish({
-          outcome: 'win',
-          score: Math.max(nextScores.p1, nextScores.p2) * 35,
-          summaryText: lang === 'ar' ? `الفائز: ${win} (${nextScores.p1}-${nextScores.p2})` : `Winner: ${win} (${nextScores.p1}-${nextScores.p2})`,
+          outcome: win === 'draw' ? 'draw' : 'win',
+          score: Math.max(nextScores.p1, nextScores.p2) * 30,
+          summaryText:
+            win === 'draw'
+              ? lang === 'ar'
+                ? `تعادل (${nextScores.p1}-${nextScores.p2})`
+                : `Tie (${nextScores.p1}-${nextScores.p2})`
+              : lang === 'ar'
+              ? `الفائز: ${win} (${nextScores.p1}-${nextScores.p2})`
+              : `Winner: ${win} (${nextScores.p1}-${nextScores.p2})`,
         });
       } else {
         onFinish({
-          outcome: nextScores.p1 >= 70 ? 'win' : 'draw',
+          outcome: nextScores.p1 >= 150 ? 'win' : 'draw',
           score: nextScores.p1,
           summaryText: `${lang === 'ar' ? 'آخر استجابة:' : 'Last reflex:'} ${ms} ms`,
         });
@@ -285,7 +294,7 @@ export const GameReactionDuel: React.FC<GameProps> = ({ lang, mode, onFinish }) 
   return (
     <div className="max-w-lg mx-auto space-y-5 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{lang === 'ar' ? `الجولة ${round}/3` : `Round ${round}/3`}</span>
+        <span>{lang === 'ar' ? `الجولة ${round}/${TOTAL_ROUNDS}` : `Round ${round}/${TOTAL_ROUNDS}`}</span>
         {lastNote && <span className="font-mono-tabular text-[#C84B31]">{lastNote}</span>}
       </div>
 
@@ -342,14 +351,19 @@ export const GameReactionDuel: React.FC<GameProps> = ({ lang, mode, onFinish }) 
 };
 
 /* ============================================================================
- * 14. TYPING RACE (WPM Speed Sprint)
+ * 14. TYPING RACE (5-Stage WPM Speed Sprint)
  * ============================================================================ */
 export const GameTypingRace: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const sentences = TYPING_SENTENCES[lang];
-  const [target] = useState(() => sentences[Math.floor(Math.random() * sentences.length)]);
+  const stageTargets = useMemo(
+    () => [...TYPING_SENTENCES[lang]].sort(() => Math.random() - 0.5).slice(0, 5),
+    [lang]
+  );
+  const [stageIdx, setStageIdx] = useState(0);
   const [typed, setTyped] = useState('');
   const startedAtRef = useRef<number | null>(null);
   const [wpm, setWpm] = useState(0);
+  const [completedWpms, setCompletedWpms] = useState<number[]>([]);
+  const target = stageTargets[stageIdx];
 
   const handleChange = (val: string) => {
     if (!startedAtRef.current && val.length > 0) {
@@ -366,21 +380,37 @@ export const GameTypingRace: React.FC<GameProps> = ({ lang, onFinish, onScorePro
     if (val === target) {
       soundEngine.playPoint();
       const mins = Math.max(0.02, (performance.now() - (startedAtRef.current ?? performance.now())) / 60000);
-      const finalWpm = Math.round(target.split(/\s+/).length / mins);
-      const score = Math.min(130, 50 + finalWpm);
-      onScoreProgress?.(score);
-      onFinish({
-        outcome: 'win',
-        score,
-        summaryText: `${finalWpm} WPM`,
-      });
+      const stageWpm = Math.round(target.split(/\s+/).length / mins);
+      const nextWpms = [...completedWpms, stageWpm];
+      setCompletedWpms(nextWpms);
+      const avgWpm = Math.round(nextWpms.reduce((a, b) => a + b, 0) / nextWpms.length);
+      const progressScore = Math.min(180, nextWpms.length * 25 + avgWpm);
+      onScoreProgress?.(progressScore);
+
+      if (stageIdx + 1 >= stageTargets.length) {
+        onFinish({
+          outcome: 'win',
+          score: progressScore,
+          summaryText: `${avgWpm} WPM (${stageTargets.length}/5)`,
+        });
+      } else {
+        setStageIdx((s) => s + 1);
+        setTyped('');
+        startedAtRef.current = null;
+        setWpm(0);
+      }
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{lang === 'ar' ? 'تقدم الكتابة' : 'Progress'}: {Math.round((typed.length / target.length) * 100)}%</span>
+        <span>
+          {lang === 'ar'
+            ? `الجملة ${stageIdx + 1}/${stageTargets.length}`
+            : `Stage ${stageIdx + 1}/${stageTargets.length}`}
+        </span>
+        <span>{lang === 'ar' ? 'تقدم الجملة' : 'Progress'}: {Math.round((typed.length / target.length) * 100)}%</span>
         <span className="font-mono-tabular text-[#C84B31]">{wpm} WPM</span>
       </div>
 
@@ -412,41 +442,49 @@ export const GameTypingRace: React.FC<GameProps> = ({ lang, onFinish, onScorePro
 };
 
 /* ============================================================================
- * 15. FOCUS CHALLENGE (Stroop Ink vs Meaning Test)
+ * 15. FOCUS CHALLENGE (Stroop Ink vs Meaning Test — 20 Progressive Rounds)
  * ============================================================================ */
 const STROOP_ITEMS = [
   { key: 'red', hex: '#DC2626', label: { ar: 'أحمر', en: 'RED' } },
   { key: 'blue', hex: '#2563EB', label: { ar: 'أزرق', en: 'BLUE' } },
   { key: 'green', hex: '#16A34A', label: { ar: 'أخضر', en: 'GREEN' } },
   { key: 'amber', hex: '#D97706', label: { ar: 'أصفر', en: 'AMBER' } },
+  { key: 'purple', hex: '#7C3AED', label: { ar: 'بنفسجي', en: 'PURPLE' } },
+  { key: 'teal', hex: '#0D9488', label: { ar: 'فيروزي', en: 'TEAL' } },
 ];
 
 export const GameFocusChallenge: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const TOTAL_ROUNDS = 20;
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [wordIdx, setWordIdx] = useState(0);
   const [inkIdx, setInkIdx] = useState(2);
 
+  const activePoolCount = round >= 10 ? 6 : 4;
+  const visibleItems = STROOP_ITEMS.slice(0, activePoolCount);
+
   const nextTrial = (curRound: number, curScore: number) => {
-    if (curRound >= 10) {
+    if (curRound >= TOTAL_ROUNDS) {
       onFinish({
-        outcome: curScore >= 70 ? 'win' : 'draw',
+        outcome: curScore >= 140 ? 'win' : 'draw',
         score: curScore,
         summaryText: `${curScore} pts`,
       });
       return;
     }
-    const w = Math.floor(Math.random() * 4);
-    let ink = Math.floor(Math.random() * 4);
-    if (ink === w) ink = (ink + 1) % 4;
+    const nextRound = curRound + 1;
+    const poolLen = nextRound >= 10 ? 6 : 4;
+    const w = Math.floor(Math.random() * poolLen);
+    let ink = Math.floor(Math.random() * poolLen);
+    if (ink === w) ink = (ink + 1) % poolLen;
     setWordIdx(w);
     setInkIdx(ink);
-    setRound(curRound + 1);
+    setRound(nextRound);
   };
 
   const handlePick = (chosenInkIdx: number) => {
     const correct = chosenInkIdx === inkIdx;
-    const nextScore = correct ? score + 12 : score;
+    const nextScore = correct ? score + 10 : score;
     if (correct) {
       soundEngine.playPoint();
       setScore(nextScore);
@@ -460,7 +498,7 @@ export const GameFocusChallenge: React.FC<GameProps> = ({ lang, onFinish, onScor
   return (
     <div className="max-w-md mx-auto space-y-6 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{round}/10</span>
+        <span>{round}/{TOTAL_ROUNDS}</span>
         <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
       </div>
 
@@ -479,8 +517,8 @@ export const GameFocusChallenge: React.FC<GameProps> = ({ lang, onFinish, onScor
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {STROOP_ITEMS.map((item, idx) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {visibleItems.map((item, idx) => (
           <button
             key={item.key}
             type="button"
@@ -496,18 +534,19 @@ export const GameFocusChallenge: React.FC<GameProps> = ({ lang, onFinish, onScor
 };
 
 /* ============================================================================
- * 16. FAST COUNTING
+ * 16. FAST COUNTING (12 Rounds Scaling Grid 24 -> 30 -> 36)
  * ============================================================================ */
 const COUNT_TOKENS = ['★', '●', '▲', '◆'];
 
-function makeCountRound() {
+function makeCountRound(round: number) {
+  const tokenCount = round <= 4 ? 24 : round <= 8 ? 30 : 36;
   const targetIdx = Math.floor(Math.random() * COUNT_TOKENS.length);
-  const grid = Array.from({ length: 24 }, () => COUNT_TOKENS[Math.floor(Math.random() * COUNT_TOKENS.length)]);
+  const grid = Array.from({ length: tokenCount }, () => COUNT_TOKENS[Math.floor(Math.random() * COUNT_TOKENS.length)]);
   const target = COUNT_TOKENS[targetIdx];
   const answer = grid.filter((x) => x === target).length;
   const opts = new Set([answer]);
   while (opts.size < 4) {
-    const cand = Math.max(1, answer + Math.floor(Math.random() * 5) - 2);
+    const cand = Math.max(1, answer + Math.floor(Math.random() * 7) - 3);
     opts.add(cand);
   }
   return {
@@ -519,13 +558,14 @@ function makeCountRound() {
 }
 
 export const GameFastCounting: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const TOTAL_ROUNDS = 12;
   const [round, setRound] = useState(1);
-  const [data, setData] = useState(() => makeCountRound());
+  const [data, setData] = useState(() => makeCountRound(1));
   const [score, setScore] = useState(0);
 
   const pickAnswer = (num: number) => {
     const correct = num === data.answer;
-    const nextScore = correct ? score + 25 : score;
+    const nextScore = correct ? score + 20 : score;
     if (correct) {
       soundEngine.playPoint();
       setScore(nextScore);
@@ -533,22 +573,23 @@ export const GameFastCounting: React.FC<GameProps> = ({ lang, onFinish, onScoreP
     } else {
       soundEngine.playError();
     }
-    if (round >= 4) {
+    if (round >= TOTAL_ROUNDS) {
       onFinish({
-        outcome: nextScore >= 75 ? 'win' : 'draw',
+        outcome: nextScore >= 140 ? 'win' : 'draw',
         score: nextScore,
         summaryText: `${nextScore} pts`,
       });
     } else {
-      setRound((r) => r + 1);
-      setData(makeCountRound());
+      const nextRound = round + 1;
+      setRound(nextRound);
+      setData(makeCountRound(nextRound));
     }
   };
 
   return (
     <div className="max-w-md mx-auto space-y-5 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{round}/4</span>
+        <span>{round}/{TOTAL_ROUNDS}</span>
         <span>
           {lang === 'ar' ? 'كم عدد الرمز:' : 'Count target:'}{' '}
           <strong className="text-lg text-[#C84B31]">{data.target}</strong>
@@ -584,7 +625,7 @@ export const GameFastCounting: React.FC<GameProps> = ({ lang, onFinish, onScoreP
 };
 
 /* ============================================================================
- * 17. ODD ONE OUT
+ * 17. ODD ONE OUT (15 Progressive Stages: 3x3 -> 4x4 -> 5x5 -> 6x6)
  * ============================================================================ */
 const ODD_PAIRS = [
   { main: '🍎', odd: '🍅' },
@@ -592,19 +633,25 @@ const ODD_PAIRS = [
   { main: '🧭', odd: '⏱️' },
   { main: '🔷', odd: '🔶' },
   { main: '🌿', odd: '🍀' },
+  { main: '🔑', odd: '🗝️' },
+  { main: '☕', odd: '🍵' },
+  { main: '🐻', odd: '🐼' },
+  { main: '⭐', odd: '🌟' },
+  { main: '🎈', odd: '🏮' },
 ];
 
 export const GameOddOneOut: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const TOTAL_ROUNDS = 15;
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
-  const size = round < 2 ? 3 : 4;
+  const size = round < 3 ? 3 : round < 7 ? 4 : round < 11 ? 5 : 6;
   const total = size * size;
   const oddIdx = useMemo(() => Math.floor(Math.random() * total), [round, total]);
   const pair = ODD_PAIRS[round % ODD_PAIRS.length];
 
   const handlePick = (idx: number) => {
     const correct = idx === oddIdx;
-    const nextScore = correct ? score + 25 : score;
+    const nextScore = correct ? score + 18 : score;
     if (correct) {
       soundEngine.playPoint();
       setScore(nextScore);
@@ -612,9 +659,9 @@ export const GameOddOneOut: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
     } else {
       soundEngine.playError();
     }
-    if (round + 1 >= 5) {
+    if (round + 1 >= TOTAL_ROUNDS) {
       onFinish({
-        outcome: nextScore >= 75 ? 'win' : 'draw',
+        outcome: nextScore >= 160 ? 'win' : 'draw',
         score: nextScore,
         summaryText: `${nextScore} pts`,
       });
@@ -626,13 +673,13 @@ export const GameOddOneOut: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
   return (
     <div className="max-w-sm mx-auto space-y-5 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{round + 1}/5</span>
+        <span>{round + 1}/{TOTAL_ROUNDS}</span>
         <span>{lang === 'ar' ? 'اضغط على العنصر المختلف' : 'Tap the odd item out'}</span>
         <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
       </div>
 
       <div
-        className="grid gap-2 p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28]"
+        className="grid gap-1.5 p-3 rounded-2xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28]"
         style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
       >
         {Array.from({ length: total }, (_, idx) => (
@@ -640,7 +687,9 @@ export const GameOddOneOut: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
             key={idx}
             type="button"
             onClick={() => handlePick(idx)}
-            className="aspect-square rounded-xl bg-white dark:bg-[#1E1B18] border border-[#E5DEC9] dark:border-[#342E28] text-2xl flex items-center justify-center hover:border-[#C84B31] tactile-btn cursor-pointer"
+            className={`aspect-square rounded-xl bg-white dark:bg-[#1E1B18] border border-[#E5DEC9] dark:border-[#342E28] flex items-center justify-center hover:border-[#C84B31] tactile-btn cursor-pointer ${
+              size >= 6 ? 'text-lg' : size === 5 ? 'text-xl' : 'text-2xl'
+            }`}
           >
             {idx === oddIdx ? pair.odd : pair.main}
           </button>
@@ -651,30 +700,49 @@ export const GameOddOneOut: React.FC<GameProps> = ({ lang, onFinish, onScoreProg
 };
 
 /* ============================================================================
- * 18. MENTAL MATH CHAIN
+ * 18. MENTAL MATH CHAIN (10 Escalating Arithmetic Chains: 4 -> 5 -> 6 Steps)
  * ============================================================================ */
-function makeChain() {
-  const start = Math.floor(Math.random() * 12) + 4;
-  const add = Math.floor(Math.random() * 9) + 3;
-  const mul = Math.floor(Math.random() * 3) + 2;
-  const sub = Math.floor(Math.random() * 8) + 2;
-  const answer = (start + add) * mul - sub;
-  const opts = new Set([answer, answer + 4, answer - 3, answer + 8]);
+function makeChain(round: number) {
+  const start = Math.floor(Math.random() * (10 + round * 2)) + 4;
+  const add1 = Math.floor(Math.random() * 9) + 3;
+  const mul = Math.floor(Math.random() * (round >= 6 ? 4 : 3)) + 2;
+  const sub = Math.floor(Math.random() * 10) + 2;
+
+  let val = (start + add1) * mul - sub;
+  const steps = [`${start}`, `+ ${add1}`, `× ${mul}`, `- ${sub}`];
+
+  if (round >= 4) {
+    const add2 = Math.floor(Math.random() * 14) + 5;
+    val += add2;
+    steps.push(`+ ${add2}`);
+  }
+  if (round >= 8) {
+    const mul2 = 2;
+    val *= mul2;
+    steps.push(`× ${mul2}`);
+  }
+
+  const opts = new Set([val]);
+  for (const offset of [4, -3, 8, -6, 10, 2]) {
+    if (opts.size >= 4) break;
+    opts.add(val + offset);
+  }
   return {
-    steps: [`${start}`, `+ ${add}`, `× ${mul}`, `- ${sub}`],
-    answer,
+    steps,
+    answer: val,
     options: Array.from(opts).slice(0, 4).sort((a, b) => a - b),
   };
 }
 
 export const GameMentalMath: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
+  const TOTAL_ROUNDS = 10;
   const [round, setRound] = useState(1);
-  const [chain, setChain] = useState(() => makeChain());
+  const [chain, setChain] = useState(() => makeChain(1));
   const [score, setScore] = useState(0);
 
   const pick = (val: number) => {
     const correct = val === chain.answer;
-    const nextScore = correct ? score + 30 : score;
+    const nextScore = correct ? score + 24 : score;
     if (correct) {
       soundEngine.playPoint();
       setScore(nextScore);
@@ -682,22 +750,23 @@ export const GameMentalMath: React.FC<GameProps> = ({ lang, onFinish, onScorePro
     } else {
       soundEngine.playError();
     }
-    if (round >= 4) {
+    if (round >= TOTAL_ROUNDS) {
       onFinish({
-        outcome: nextScore >= 90 ? 'win' : 'draw',
+        outcome: nextScore >= 150 ? 'win' : 'draw',
         score: nextScore,
         summaryText: `${nextScore} pts`,
       });
     } else {
-      setRound((r) => r + 1);
-      setChain(makeChain());
+      const nextRound = round + 1;
+      setRound(nextRound);
+      setChain(makeChain(nextRound));
     }
   };
 
   return (
     <div className="max-w-lg mx-auto space-y-5 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>{round}/4</span>
+        <span>{round}/{TOTAL_ROUNDS}</span>
         <span>{lang === 'ar' ? 'احسب السلسلة ذهنياً من اليسار لليمين' : 'Calculate step by step left-to-right'}</span>
         <span className="font-mono-tabular text-[#2D6A4F] dark:text-[#52B788]">{score} pts</span>
       </div>
@@ -730,15 +799,18 @@ export const GameMentalMath: React.FC<GameProps> = ({ lang, onFinish, onScorePro
 };
 
 /* ============================================================================
- * 19. LETTER ARRANGE (Rapid Anagram Sprint)
+ * 19. LETTER ARRANGE (12-Word Rapid Anagram Sprint — 90s)
  * ============================================================================ */
 export const GameLetterArrange: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const words = useMemo(() => SCRAMBLE_WORDS[lang].slice(0, 4).map((w) => w.word), [lang]);
+  const words = useMemo(
+    () => [...SCRAMBLE_WORDS[lang]].sort(() => Math.random() - 0.5).slice(0, 12).map((w) => w.word),
+    [lang]
+  );
   const [idx, setIdx] = useState(0);
   const word = words[idx];
   const [pool, setPool] = useState<string[]>(() => scrambleChars(word));
   const [pickedIndices, setPickedIndices] = useState<number[]>([]);
-  const [timeLeft, setTimeLeft] = useState(45);
+  const [timeLeft, setTimeLeft] = useState(90);
   const [score, setScore] = useState(0);
   const doneRef = useRef(false);
 
@@ -747,7 +819,7 @@ export const GameLetterArrange: React.FC<GameProps> = ({ lang, onFinish, onScore
       setTimeLeft((t) => {
         if (t <= 1 && !doneRef.current) {
           doneRef.current = true;
-          onFinish({ outcome: score >= 60 ? 'win' : 'draw', score, summaryText: `${score} pts` });
+          onFinish({ outcome: score >= 120 ? 'win' : 'draw', score, summaryText: `${score} pts` });
           return 0;
         }
         return t - 1;
@@ -767,7 +839,7 @@ export const GameLetterArrange: React.FC<GameProps> = ({ lang, onFinish, onScore
 
     if (nextBuilt === word) {
       soundEngine.playPoint();
-      const nextScore = score + 30;
+      const nextScore = score + 22;
       setScore(nextScore);
       onScoreProgress?.(nextScore);
       if (idx + 1 >= words.length) {
@@ -779,7 +851,7 @@ export const GameLetterArrange: React.FC<GameProps> = ({ lang, onFinish, onScore
           setIdx((i) => i + 1);
           setPool(scrambleChars(nw));
           setPickedIndices([]);
-        }, 350);
+        }, 300);
       }
     }
   };
@@ -832,10 +904,10 @@ export const GameLetterArrange: React.FC<GameProps> = ({ lang, onFinish, onScore
 };
 
 /* ============================================================================
- * 20. RAPID QUESTIONS (3-Second True/False Blitz)
+ * 20. RAPID QUESTIONS (20-Round 3.5-Second True/False Blitz)
  * ============================================================================ */
 export const GameRapidQuestions: React.FC<GameProps> = ({ lang, onFinish, onScoreProgress }) => {
-  const items = useMemo(() => [...TRUE_FALSE_BANK].sort(() => Math.random() - 0.5).slice(0, 8), []);
+  const items = useMemo(() => [...TRUE_FALSE_BANK].sort(() => Math.random() - 0.5).slice(0, 20), []);
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(3.5);
@@ -856,7 +928,7 @@ export const GameRapidQuestions: React.FC<GameProps> = ({ lang, onFinish, onScor
 
   const answer = (choice: boolean | null) => {
     const correct = choice !== null && choice === item.isTrue;
-    const nextScore = correct ? score + 15 : score;
+    const nextScore = correct ? score + 12 : score;
     if (correct) {
       soundEngine.playPoint();
       setScore(nextScore);
@@ -866,7 +938,7 @@ export const GameRapidQuestions: React.FC<GameProps> = ({ lang, onFinish, onScor
     }
     if (idx + 1 >= items.length) {
       onFinish({
-        outcome: nextScore >= 75 ? 'win' : 'draw',
+        outcome: nextScore >= 144 ? 'win' : 'draw',
         score: nextScore,
         summaryText: `${nextScore} pts`,
       });

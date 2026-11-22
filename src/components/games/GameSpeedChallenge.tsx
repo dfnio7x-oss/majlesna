@@ -9,78 +9,43 @@ const STROOP_COLORS = [
   { key: 'amber', hex: '#D97706', ar: 'أصفر', en: 'AMBER' },
 ];
 
+type SpeedStage = 'reflex1' | 'targets1' | 'stroop1' | 'reflex2' | 'targets2' | 'stroop2';
+
+const STAGE_ORDER: SpeedStage[] = [
+  'reflex1',
+  'targets1',
+  'stroop1',
+  'reflex2',
+  'targets2',
+  'stroop2',
+];
+
 export const GameSpeedChallenge: React.FC<GameProps> = ({
   lang,
   onFinish,
   onScoreProgress,
 }) => {
-  const [stage, setStage] = useState<'reflex' | 'targets' | 'stroop'>('reflex');
+  const [stageIdx, setStageIdx] = useState(0);
+  const stage = STAGE_ORDER[stageIdx];
   const [score, setScore] = useState(0);
 
-  // Stage 1: Reflex Light
+  // Reflex stage state
   const [lightState, setLightState] = useState<'waiting' | 'ready' | 'early' | 'done'>('waiting');
   const [reactionMs, setReactionMs] = useState<number | null>(null);
   const startTimeRef = useRef<number>(0);
 
-  // Stage 2: Target Burst (5 targets)
+  // Target Burst state
   const [targetPos, setTargetPos] = useState({ x: 50, y: 50 });
-  const [targetsLeft, setTargetsLeft] = useState(5);
+  const [targetsLeft, setTargetsLeft] = useState(8);
 
-  // Stage 3: Stroop Test (4 rounds)
+  // Stroop state
   const [stroopRound, setStroopRound] = useState(0);
   const [stroopWord, setStroopWord] = useState(STROOP_COLORS[0]);
   const [stroopInk, setStroopInk] = useState(STROOP_COLORS[1]);
 
-  useEffect(() => {
-    if (stage !== 'reflex' || lightState !== 'waiting') return;
-    const delay = 1400 + Math.random() * 1800;
-    const timer = window.setTimeout(() => {
-      startTimeRef.current = performance.now();
-      setLightState('ready');
-    }, delay);
-    return () => window.clearTimeout(timer);
-  }, [stage, lightState]);
-
-  const handleReflexTap = () => {
-    if (lightState === 'waiting') {
-      soundEngine.playError();
-      setLightState('early');
-      window.setTimeout(() => setLightState('waiting'), 900);
-      return;
-    }
-    if (lightState === 'ready') {
-      const ms = Math.round(performance.now() - startTimeRef.current);
-      setReactionMs(ms);
-      setLightState('done');
-      soundEngine.playPoint();
-      const bonus = Math.max(15, Math.round(60 - ms / 15));
-      const nextScore = score + bonus;
-      setScore(nextScore);
-      onScoreProgress?.(nextScore);
-      window.setTimeout(() => {
-        setStage('targets');
-        setTargetPos({ x: 25 + Math.random() * 50, y: 25 + Math.random() * 50 });
-      }, 900);
-    }
-  };
-
-  const handleTargetClick = () => {
-    soundEngine.playPoint();
-    const nextScore = score + 15;
-    setScore(nextScore);
-    onScoreProgress?.(nextScore);
-
-    if (targetsLeft <= 1) {
-      setStage('stroop');
-      pickNextStroop();
-    } else {
-      setTargetsLeft((n) => n - 1);
-      setTargetPos({
-        x: 15 + Math.random() * 70,
-        y: 18 + Math.random() * 64,
-      });
-    }
-  };
+  const isReflex = stage === 'reflex1' || stage === 'reflex2';
+  const isTargets = stage === 'targets1' || stage === 'targets2';
+  const isStroop = stage === 'stroop1' || stage === 'stroop2';
 
   const pickNextStroop = () => {
     const w = STROOP_COLORS[Math.floor(Math.random() * STROOP_COLORS.length)];
@@ -92,45 +57,115 @@ export const GameSpeedChallenge: React.FC<GameProps> = ({
     setStroopInk(ink);
   };
 
+  const advanceStage = () => {
+    const nextIdx = stageIdx + 1;
+    const nextStage = STAGE_ORDER[nextIdx];
+    setStageIdx(nextIdx);
+    if (nextStage === 'reflex2') {
+      setLightState('waiting');
+    } else if (nextStage === 'targets1' || nextStage === 'targets2') {
+      setTargetsLeft(nextStage === 'targets2' ? 10 : 8);
+      setTargetPos({ x: 20 + Math.random() * 60, y: 22 + Math.random() * 56 });
+    } else if (nextStage === 'stroop1' || nextStage === 'stroop2') {
+      setStroopRound(0);
+      pickNextStroop();
+    }
+  };
+
+  useEffect(() => {
+    if (!isReflex || lightState !== 'waiting') return;
+    const delay = stage === 'reflex2' ? 950 + Math.random() * 1400 : 1300 + Math.random() * 1700;
+    const timer = window.setTimeout(() => {
+      startTimeRef.current = performance.now();
+      setLightState('ready');
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [stage, isReflex, lightState]);
+
+  const handleReflexTap = () => {
+    if (lightState === 'waiting') {
+      soundEngine.playError();
+      setLightState('early');
+      window.setTimeout(() => setLightState('waiting'), 800);
+      return;
+    }
+    if (lightState === 'ready') {
+      const ms = Math.round(performance.now() - startTimeRef.current);
+      setReactionMs(ms);
+      setLightState('done');
+      soundEngine.playPoint();
+      const bonus = Math.max(15, Math.round(60 - ms / 14));
+      const nextScore = score + bonus;
+      setScore(nextScore);
+      onScoreProgress?.(nextScore);
+      window.setTimeout(advanceStage, 750);
+    }
+  };
+
+  const handleTargetClick = () => {
+    soundEngine.playPoint();
+    const nextScore = score + 14;
+    setScore(nextScore);
+    onScoreProgress?.(nextScore);
+
+    if (targetsLeft <= 1) {
+      advanceStage();
+    } else {
+      setTargetsLeft((n) => n - 1);
+      setTargetPos({
+        x: 12 + Math.random() * 76,
+        y: 16 + Math.random() * 68,
+      });
+    }
+  };
+
   const handleStroopPick = (key: string) => {
     const correct = key === stroopInk.key;
-    const nextScore = score + (correct ? 20 : 0);
+    const nextScore = score + (correct ? 18 : 0);
     if (correct) soundEngine.playPoint();
     else soundEngine.playError();
     setScore(nextScore);
     onScoreProgress?.(nextScore);
 
-    if (stroopRound >= 3) {
-      onFinish({
-        outcome: nextScore >= 85 ? 'win' : 'draw',
-        score: nextScore,
-        summaryText:
-          reactionMs !== null
-            ? lang === 'ar'
-              ? `سرعة رد فعلك: ${reactionMs} مللي ثانية`
-              : `Your reaction time: ${reactionMs} ms`
-            : undefined,
-      });
+    const maxStroop = stage === 'stroop2' ? 8 : 6;
+    if (stroopRound + 1 >= maxStroop) {
+      if (stageIdx + 1 >= STAGE_ORDER.length) {
+        onFinish({
+          outcome: nextScore >= 180 ? 'win' : 'draw',
+          score: nextScore,
+          summaryText:
+            reactionMs !== null
+              ? lang === 'ar'
+                ? `أكملت ٦ مراحل! آخر سرعة استجابة: ${reactionMs} مللي ثانية`
+                : `Cleared all 6 stages! Last reaction: ${reactionMs} ms`
+              : undefined,
+        });
+      } else {
+        advanceStage();
+      }
     } else {
       setStroopRound((r) => r + 1);
       pickNextStroop();
     }
   };
 
+  const stageTitle = () => {
+    if (stage === 'reflex1') return lang === 'ar' ? 'المرحلة 1/6: سرعة الإشارة' : 'Stage 1/6: Reflex Signal';
+    if (stage === 'targets1') return lang === 'ar' ? 'المرحلة 2/6: التقاط الأهداف' : 'Stage 2/6: Target Burst';
+    if (stage === 'stroop1') return lang === 'ar' ? 'المرحلة 3/6: اختبار لون الحبر' : 'Stage 3/6: Ink Color Match';
+    if (stage === 'reflex2') return lang === 'ar' ? 'المرحلة 4/6: رد الفعل الفائق' : 'Stage 4/6: Turbo Reflex';
+    if (stage === 'targets2') return lang === 'ar' ? 'المرحلة 5/6: عاصفة الأهداف السريعة' : 'Stage 5/6: Rapid Target Swarm';
+    return lang === 'ar' ? 'المرحلة 6/6: تحدي الألوان النهائي' : 'Stage 6/6: Final Color Blitz';
+  };
+
   return (
     <div className="max-w-lg mx-auto space-y-6 text-center">
       <div className="flex items-center justify-between text-xs font-semibold text-[#57534E] dark:text-[#B8AFA3]">
-        <span>
-          {stage === 'reflex'
-            ? lang === 'ar' ? 'المرحلة ١/٣: سرعة الإشارة' : 'Stage 1/3: Reflex Signal'
-            : stage === 'targets'
-            ? lang === 'ar' ? 'المرحلة ٢/٣: التقاط الأهداف' : 'Stage 2/3: Target Burst'
-            : lang === 'ar' ? 'المرحلة ٣/٣: لون الحبر' : 'Stage 3/3: Ink Color Match'}
-        </span>
+        <span>{stageTitle()}</span>
         <span className="font-mono-tabular text-[#C84B31]">{score} pts</span>
       </div>
 
-      {stage === 'reflex' && (
+      {isReflex && (
         <button
           type="button"
           onClick={handleReflexTap}
@@ -154,7 +189,7 @@ export const GameSpeedChallenge: React.FC<GameProps> = ({
         </button>
       )}
 
-      {stage === 'targets' && (
+      {isTargets && (
         <div className="relative w-full h-64 rounded-3xl bg-[#FAF8F4] dark:bg-[#25211D] border border-[#E5DEC9] dark:border-[#342E28] overflow-hidden">
           <p className="pt-3 text-xs text-[#57534E] dark:text-[#B8AFA3] font-mono-tabular">
             {lang === 'ar' ? `المتبقي: ${targetsLeft}` : `Remaining: ${targetsLeft}`}
@@ -164,15 +199,18 @@ export const GameSpeedChallenge: React.FC<GameProps> = ({
             onClick={handleTargetClick}
             aria-label="Target"
             style={{ left: `${targetPos.x}%`, top: `${targetPos.y}%` }}
-            className="absolute -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-[#C84B31] border-4 border-white shadow-md hover:scale-105 transition-transform cursor-pointer"
+            className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#C84B31] border-4 border-white shadow-md hover:scale-105 transition-transform cursor-pointer ${
+              stage === 'targets2' ? 'w-11 h-11' : 'w-14 h-14'
+            }`}
           />
         </div>
       )}
 
-      {stage === 'stroop' && (
+      {isStroop && (
         <div className="space-y-6 py-4">
           <p className="text-xs text-[#57534E] dark:text-[#B8AFA3]">
-            {lang === 'ar' ? 'اختر لون الحبر وليس معنى الكلمة:' : 'Select the INK color, not the word:'}
+            {lang === 'ar' ? 'اختر لون الحبر وليس معنى الكلمة:' : 'Select the INK color, not the word:'}{' '}
+            ({stroopRound + 1}/{stage === 'stroop2' ? 8 : 6})
           </p>
           <p className="font-display text-4xl font-extrabold" style={{ color: stroopInk.hex }}>
             {stroopWord[lang]}

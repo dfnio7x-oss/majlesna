@@ -262,18 +262,28 @@ export function useSocial(params: {
   );
 
   const addGroupMembers = useCallback(
-    async (groupId: string, memberIds: string[]): Promise<boolean> => {
+    async (
+      groupId: string,
+      payload: string[] | { memberIds?: string[]; usernames?: string[] }
+    ): Promise<{ ok: boolean; error?: string }> => {
       const headers = await getAuthHeaders();
+      const bodyPayload = Array.isArray(payload)
+        ? { playerId, memberIds: payload }
+        : { playerId, ...payload };
       const res = await fetch(`/api/groups/${encodeURIComponent(groupId)}/members`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ playerId, memberIds }),
+        body: JSON.stringify(bodyPayload),
       });
-      if (res.ok) {
+      const data = (await res.json().catch(() => ({ ok: res.ok }))) as {
+        ok?: boolean;
+        error?: string;
+      };
+      if (res.ok && data.ok !== false) {
         await refreshSocial();
-        return true;
+        return { ok: true };
       }
-      return false;
+      return { ok: false, error: data.error || 'user_not_found' };
     },
     [getAuthHeaders, playerId, refreshSocial]
   );
